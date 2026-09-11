@@ -54,15 +54,51 @@ class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
         self.title("أداة صيانة النظام")
-        self.geometry("1240x760")
-        self.minsize(1000, 640)
+        self.geometry("1320x820")
+        self.minsize(1100, 700)
         self.configure(bg=BG)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self._build_style()
+        self._setup_icon()
         self._build_layout()
         self.show("dashboard")
         self.after(500, self.refresh_dashboard)
         self.after(3500, self._live_refresh)
+
+    def _setup_icon(self) -> None:
+        try:
+            self.iconbitmap(default="")
+        except Exception:
+            pass
+
+    def _button(self, parent, text, command, primary=False):
+        return tk.Button(
+            parent, text=text, command=command,
+            bg=ACCENT if primary else PANEL2,
+            fg="white" if primary else TEXT,
+            activebackground="#3b82f6",
+            activeforeground="white",
+            relief="flat", bd=0,
+            padx=18, pady=9,
+            font=("Segoe UI", 10, "bold" if primary else "normal"),
+            cursor="hand2"
+        )
+
+    def _metric_ring(self, parent, title, value, subtitle, col):
+        box = tk.Frame(parent, bg=PANEL, highlightthickness=1, highlightbackground=PANEL2)
+        box.grid(row=0, column=col, sticky="nsew", padx=6, pady=6)
+        tk.Label(box, text=title, bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 10, "bold"), anchor="e").pack(fill="x", padx=16, pady=(14, 0))
+        row = tk.Frame(box, bg=PANEL)
+        row.pack(fill="x", padx=16, pady=4)
+        v = tk.Label(row, text=value, bg=PANEL, fg="white",
+                     font=("Segoe UI", 28, "bold"), anchor="e")
+        v.pack(side="right")
+        tk.Label(row, text=subtitle, bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9), anchor="e").pack(side="right", padx=(0, 10))
+        bar = ttk.Progressbar(box, mode="determinate", maximum=100)
+        bar.pack(fill="x", padx=16, pady=(4, 16))
+        return v, bar
 
     def _build_style(self) -> None:
         s = ttk.Style(self)
@@ -82,6 +118,7 @@ class App(tk.Tk):
         self.status = tk.Label(head, text="جاهز", bg="#0b1220", fg="#93c5fd",
                                font=("Segoe UI", 10))
         self.status.pack(side="left", padx=24)
+        tk.Label(head, text="● متصل ومراقب", bg="#0b1220", fg="#86efac", font=("Segoe UI", 9, "bold")).pack(side="left", padx=10)
 
         body = tk.Frame(self, bg=BG)
         body.pack(fill="both", expand=True)
@@ -89,8 +126,9 @@ class App(tk.Tk):
         nav = tk.Frame(body, bg=PANEL, width=225)
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
-        tk.Label(nav, text="الإدارة والصيانة", bg=PANEL, fg=MUTED,
-                 font=("Segoe UI", 10, "bold")).pack(fill="x", padx=18, pady=(22, 10))
+        tk.Label(nav, text="SYSTEM MAINTENANCE", bg=PANEL, fg="#60a5fa",
+                 font=("Segoe UI", 9, "bold")).pack(fill="x", padx=18, pady=(22, 4))
+        tk.Label(nav, text="مركز التحكم بالنظام", bg=PANEL, fg=MUTED, font=("Segoe UI", 9)).pack(fill="x", padx=18, pady=(0, 12))
 
         items = [
             ("dashboard", "لوحة المعلومات"),
@@ -177,6 +215,8 @@ class App(tk.Tk):
 
     def _dashboard_controls(self) -> None:
         f = self.pages["dashboard"]
+        for i in range(3):
+            f.grid_columnconfigure(i, weight=1)
         self.dc = self.card(f, "المعالج", 0, 0)
         self.dr = self.card(f, "الذاكرة", 1, 0)
         self.dd = self.card(f, "القرص", 2, 0)
@@ -184,14 +224,23 @@ class App(tk.Tk):
         self.du = self.card(f, "مدة التشغيل", 1, 1)
         self.da = self.card(f, "صلاحيات المسؤول", 2, 1)
 
+        # Quick actions give the dashboard a real control-center feel.
+        actions = tk.Frame(f, bg=BG)
+        actions.pack(fill="x", padx=12, pady=6)
+        tk.Label(actions, text="إجراءات سريعة", bg=BG, fg="white", font=("Segoe UI", 11, "bold"), anchor="e").pack(fill="x", pady=(4, 6))
+        action_row = tk.Frame(actions, bg=BG)
+        action_row.pack(fill="x")
+        self._button(action_row, "🧹 تنظيف الملفات المؤقتة", self.clean_temp).pack(side="right", padx=4)
+        self._button(action_row, "🔍 فحص الصحة", self.health_check, True).pack(side="right", padx=4)
+        self._button(action_row, "🛠 فحص SFC", lambda: self.command(["sfc", "/scannow"])).pack(side="right", padx=4)
+        self._button(action_row, "🌐 تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"])).pack(side="right", padx=4)
+
         box = tk.Frame(f, bg=PANEL)
         box.pack(fill="x", padx=12, pady=10)
         self.health = tk.Label(box, text="جاري القراءة...", bg=PANEL,
                                fg="#93c5fd", font=("Segoe UI", 12), anchor="e")
         self.health.pack(fill="x", padx=16, pady=16)
-        tk.Button(box, text="فحص صحة النظام", command=self.health_check,
-                  bg=ACCENT, fg="white", relief="flat", padx=18, pady=8).pack(
-                  anchor="e", padx=16, pady=(0, 16))
+        self._button(box, "فحص صحة النظام", self.health_check, True).pack(anchor="e", padx=16, pady=(0, 16))
 
     def _system_controls(self) -> None:
         f = self.pages["system"]
