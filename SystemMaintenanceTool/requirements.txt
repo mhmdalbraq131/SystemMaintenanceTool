@@ -1,0 +1,9 @@
+PySide6>=6.5.0
+psutil>=5.9.0
+pywin32>=305;sys_platform=='win32'
+WMI>=1.5.1;sys_platform=='win32'
+gpuinfo>=0.1.0;sys_platform=='win32'
+matplotlib>=3.7.0
+pyinstaller>=6.0.0
+pytest>=7.4.0
+pytest-qt>=4.2.0
