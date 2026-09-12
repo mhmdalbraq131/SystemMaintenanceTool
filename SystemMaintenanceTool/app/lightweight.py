@@ -103,10 +103,12 @@ class App(tk.Tk):
         tk.Frame(nav, bg=ACCENT, height=1).pack(fill="x", padx=18, pady=(0, 10))
         items = [
             ("dashboard", "⌂  لوحة المعلومات"), ("system", "▣  معلومات النظام"),
-            ("processes", "◉  العمليات"), ("storage", "▤  التخزين"), ("network", "⌁  الشبكة"),
-            ("security", "◆  الأمان"), ("maintenance", "⚙  الصيانة والإصلاح"),
+            ("processes", "◉  العمليات"), ("devices", "◈  الأجهزة والتعريفات"),
+            ("storage", "▤  التخزين"), ("network", "⌁  الشبكة"), ("security", "◆  الأمان"),
+            ("events", "◌  سجل الأحداث"), ("maintenance", "⚙  الصيانة والإصلاح"),
             ("services", "▤  خدمات Windows"), ("startup", "↗  بدء التشغيل"),
-            ("commands", "⌘  محطة الأوامر"), ("reports", "▥  التقارير"),
+            ("software", "▦  البرامج المثبتة"), ("commands", "⌘  مركز الأوامر"),
+            ("reports", "▥  التقارير"),
         ]
         self.buttons = {}
         for key, title in items:
@@ -121,8 +123,9 @@ class App(tk.Tk):
         for key, title in items:
             self.page(key, title)
         self._dashboard_controls(); self._system_controls(); self._process_controls()
-        self._storage_controls(); self._network_controls(); self._security_controls()
-        self._maintenance_controls(); self._service_controls(); self._startup_controls()
+        self._devices_controls(); self._storage_controls(); self._network_controls()
+        self._security_controls(); self._events_controls(); self._maintenance_controls()
+        self._service_controls(); self._startup_controls(); self._software_controls()
         self._command_controls(); self._report_controls()
 
     def page(self, key: str, title: str) -> tk.Frame:
@@ -277,7 +280,12 @@ class App(tk.Tk):
     def _system_controls(self):
         f=self.pages["system"]; self.system=self.textbox(f); self._button(f,"تحديث",self.refresh_system,True).pack(anchor="e",padx=24,pady=5)
     def _process_controls(self):
-        f=self.pages["processes"]; self.proc=self.tree(f,("pid","name","cpu","ram"),("PID","العملية","CPU %","RAM %")); self._button(f,"تحديث العمليات",self.refresh_processes,True).pack(anchor="e",padx=24,pady=5)
+        f=self.pages["processes"]
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"تحديث",self.refresh_processes,True).pack(side="right",padx=3)
+        self._button(bar,"إنهاء المحدد",self.kill_selected_process).pack(side="right",padx=3)
+        self._button(bar,"فتح مدير المهام",lambda:self._async_custom("taskmgr")).pack(side="right",padx=3)
+        self.proc=self.tree(f,("pid","name","cpu","ram"),("PID","العملية","CPU %","RAM %"))
     def _storage_controls(self):
         f=self.pages["storage"]; self.storage=self.textbox(f); self._button(f,"فحص الأقراص",self.refresh_storage,True).pack(anchor="e",padx=24,pady=5)
     def _network_controls(self):
@@ -286,24 +294,67 @@ class App(tk.Tk):
         f=self.pages["security"]; self.security=self.textbox(f); self._button(f,"فحص الأمان",self.refresh_security,True).pack(anchor="e",padx=24,pady=5)
     def _maintenance_controls(self):
         f=self.pages["maintenance"]
-        actions=[("تنظيف الملفات المؤقتة",self.clean_temp),("فحص ملفات Windows — SFC",lambda:self.command(["sfc","/scannow"])),
-                 ("إصلاح Windows — DISM",lambda:self.command(["DISM","/Online","/Cleanup-Image","/RestoreHealth"])),
-                 ("فحص القرص — CHKDSK",lambda:self.command(["chkdsk","C:","/scan"])),("تفريغ DNS",lambda:self.command(["ipconfig","/flushdns"])),
-                 ("إعادة ضبط Winsock",lambda:self.command(["netsh","winsock","reset"]))]
-        for title,fn in actions: self._button(f,title,fn).pack(fill="x",padx=24,pady=4)
+        actions=[
+            ("تنظيف الملفات المؤقتة",self.clean_temp),
+            ("فحص ملفات Windows — SFC",lambda:self.command(["sfc","/scannow"])),
+            ("فحص صحة Windows — DISM",lambda:self.command(["DISM","/Online","/Cleanup-Image","/CheckHealth"])),
+            ("إصلاح صورة Windows — DISM",lambda:self.command(["DISM","/Online","/Cleanup-Image","/RestoreHealth"])),
+            ("فحص القرص — CHKDSK",lambda:self.command(["chkdsk","C:","/scan"])),
+            ("تفريغ DNS",lambda:self.command(["ipconfig","/flushdns"])),
+            ("إعادة ضبط Winsock",lambda:self.command(["netsh","winsock","reset"])),
+            ("تحديث سياسات النظام",lambda:self.command(["gpupdate","/force"])),
+        ]
+        for title,fn in actions: self._button(f,title,fn).pack(fill="x",padx=24,pady=3)
         tk.Label(f,text=("تشغيل كمسؤول: نعم" if is_admin() else "تنبيه: شغّل الأداة كمسؤول لتنفيذ إصلاحات Windows."),
                  bg=BG,fg=(GOOD if is_admin() else WARN),font=("Segoe UI",10)).pack(anchor="e",padx=24,pady=10)
     def _service_controls(self):
-        f=self.pages["services"]; self.services=self.textbox(f,("Consolas",9)); self._button(f,"عرض الخدمات",self.refresh_services,True).pack(anchor="e",padx=24,pady=5)
+        f=self.pages["services"]
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"عرض الخدمات",self.refresh_services,True).pack(side="right",padx=3)
+        self._button(bar,"تشغيل",lambda:self.service_action("start")).pack(side="right",padx=3)
+        self._button(bar,"إيقاف",lambda:self.service_action("stop")).pack(side="right",padx=3)
+        self._button(bar,"إعادة تشغيل",lambda:self.service_action("restart")).pack(side="right",padx=3)
+        self.service_entry=tk.Entry(bar,bg=PANEL,fg=TEXT,insertbackground=ACCENT,relief="flat",font=("Consolas",10))
+        self.service_entry.pack(side="right",fill="x",expand=True,ipady=8,padx=8)
+        self.service_entry.insert(0,"اسم الخدمة مثل: Spooler")
+        self.services=self.textbox(f,("Consolas",9))
     def _startup_controls(self):
         f=self.pages["startup"]; self.startup=self.textbox(f,("Consolas",9)); self._button(f,"فحص بدء التشغيل",self.refresh_startup,True).pack(anchor="e",padx=24,pady=5)
+    def _devices_controls(self):
+        f=self.pages["devices"]
+        self.devices=self.textbox(f,("Consolas",9))
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"فحص الأجهزة",self.refresh_devices,True).pack(side="right",padx=3)
+        self._button(bar,"التعريفات",self.refresh_drivers).pack(side="right",padx=3)
+        self._button(bar,"إدارة الأجهزة",lambda:self._async_custom("devmgmt.msc")).pack(side="right",padx=3)
+
+    def _events_controls(self):
+        f=self.pages["events"]
+        self.events=self.textbox(f,("Consolas",8))
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"أحدث أخطاء النظام",lambda:self.refresh_events("System","Error"),True).pack(side="right",padx=3)
+        self._button(bar,"أحداث النظام",lambda:self.refresh_events("System","All")).pack(side="right",padx=3)
+        self._button(bar,"أحداث التطبيقات",lambda:self.refresh_events("Application","All")).pack(side="right",padx=3)
+        self._button(bar,"عارض الأحداث",lambda:self._async_custom("eventvwr.msc")).pack(side="right",padx=3)
+
+    def _software_controls(self):
+        f=self.pages["software"]
+        self.software=self.textbox(f,("Consolas",8))
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"فحص البرامج",self.refresh_software,True).pack(side="right",padx=3)
+        self._button(bar,"البرامج والميزات",lambda:self._async_custom("appwiz.cpl")).pack(side="right",padx=3)
+
     def _command_controls(self):
         f=self.pages["commands"]
         panel=tk.Frame(f,bg=PANEL,highlightthickness=1,highlightbackground="#15344b"); panel.pack(fill="x",padx=24,pady=(0,7))
         tk.Label(panel,text="⌘  COMMAND TERMINAL",bg=PANEL,fg=ACCENT,font=("Consolas",12,"bold")).pack(side="left",padx=16,pady=11)
         tk.Label(panel,text="محطة أوامر Windows المدمجة",bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(side="right",padx=16,pady=11)
         quick=tk.Frame(f,bg=BG); quick.pack(fill="x",padx=24,pady=4)
-        for label,cmd in [("SYSTEMINFO","systeminfo"),("IPCONFIG","ipconfig"),("TASKLIST","tasklist"),("SERVICES","sc query"),("WHOAMI","whoami")]: self._button(quick,label,lambda c=cmd:self._set_command(c)).pack(side="right",padx=3)
+        for label,cmd in [
+            ("SYSTEMINFO","systeminfo"),("IPCONFIG","ipconfig /all"),("TASKLIST","tasklist"),
+            ("NETSTAT","netstat -ano"),("SERVICES","sc query"),("DISK","wmic logicaldisk get caption,freespace,size"),
+            ("POWER","powercfg /getactivescheme"),("WHOAMI","whoami /all")
+        ]: self._button(quick,label,lambda c=cmd:self._set_command(c)).pack(side="right",padx=3)
         row=tk.Frame(f,bg=BG); row.pack(fill="x",padx=24,pady=6)
         self.cmd_entry=tk.Entry(row,bg="#020812",fg=ACCENT,insertbackground=ACCENT,relief="flat",font=("Consolas",12)); self.cmd_entry.pack(side="right",fill="x",expand=True,ipady=10,padx=(0,8))
         self._button(row,"EXECUTE  ▶",self.run_custom_command,True).pack(side="right")
@@ -365,6 +416,48 @@ class App(tk.Tk):
             except Exception as exc: lines.append(f"تعذر قراءة WMI للأمان: {exc}")
         else: lines.append("WMI غير متاح؛ تم استخدام الموارد الأساسية فقط.")
         self.replace(self.security,"\n".join(lines))
+    def kill_selected_process(self):
+        selected=self.proc.selection()
+        if not selected:
+            messagebox.showwarning("العمليات","حدد عملية أولًا.")
+            return
+        values=self.proc.item(selected[0],"values")
+        pid=int(values[0]); name=values[1]
+        if not messagebox.askyesno("إنهاء العملية",f"هل تريد إنهاء العملية؟\\n{name} (PID {pid})"):
+            return
+        self._async_command(["taskkill","/PID",str(pid),"/T"],None,30,show_window=True)
+
+    def service_action(self, action):
+        name=self.service_entry.get().strip()
+        if not name or name.lower().startswith("اسم الخدمة"):
+            messagebox.showwarning("الخدمات","اكتب اسم الخدمة.")
+            return
+        if action=="restart":
+            cmd=["cmd","/c",f'sc stop "{name}" & sc start "{name}"']
+        else:
+            cmd=["sc",action,name]
+        if messagebox.askyesno("الخدمات",f"تنفيذ {action} للخدمة {name}؟"):
+            self._async_command(cmd,self.services,60)
+
+    def refresh_devices(self):
+        ps=r'Get-PnpDevice | Sort-Object Status,FriendlyName | Format-Table -AutoSize Status,Class,FriendlyName,InstanceId'
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.devices,30)
+
+    def refresh_drivers(self):
+        ps=r'Get-CimInstance Win32_PnPSignedDriver | Where-Object {$_.DeviceName} | Sort-Object DeviceName | Select-Object DeviceName,DriverVersion,DriverProviderName | Format-Table -AutoSize'
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.devices,30)
+
+    def refresh_events(self, log_name="System", mode="All"):
+        if mode=="Error":
+            ps=f'Get-WinEvent -FilterHashtable @{{LogName="{log_name}"; Level=2}} -MaxEvents 50 | Format-List TimeCreated,ProviderName,Id,Message'
+        else:
+            ps=f'Get-WinEvent -LogName "{log_name}" -MaxEvents 50 | Format-List TimeCreated,ProviderName,Id,LevelDisplayName,Message'
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.events,45)
+
+    def refresh_software(self):
+        ps=r'$paths=@("HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*","HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*","HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"); Get-ItemProperty $paths -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Sort-Object DisplayName -Unique | Select-Object DisplayName,DisplayVersion,Publisher | Format-Table -AutoSize'
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.software,45)
+
     def refresh_services(self): self._async_command(["sc","query","type=","service","state=","all"],self.services,20)
     def refresh_startup(self): self._async_command(["reg","query",r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"],self.startup,15)
     def command(self,cmd):
@@ -416,7 +509,14 @@ class App(tk.Tk):
                     except OSError: pass
         messagebox.showinfo("التنظيف",f"تم حذف {deleted} ملف تقريبًا.")
     def refresh_report(self):
-        data={"timestamp":datetime.now().isoformat(timespec="seconds"),"computer":socket.gethostname(),"platform":platform.platform(),"windows":platform.version(),"python":platform.python_version(),"cpu_percent":psutil.cpu_percent(None),"memory_percent":psutil.virtual_memory().percent,"process_count":len(psutil.pids()),"admin":is_admin(),"disks":[]}
+        vm=psutil.virtual_memory()
+        data={"timestamp":datetime.now().isoformat(timespec="seconds"),"computer":socket.gethostname(),
+              "platform":platform.platform(),"windows":platform.version(),"architecture":platform.machine(),
+              "python":platform.python_version(),"cpu_percent":psutil.cpu_percent(None),
+              "memory_percent":vm.percent,"memory_total_gb":round(vm.total/1024**3,2),
+              "memory_available_gb":round(vm.available/1024**3,2),"process_count":len(psutil.pids()),
+              "admin":is_admin(),"boot_time":datetime.fromtimestamp(psutil.boot_time()).isoformat(timespec="seconds"),
+              "network_interfaces":list(psutil.net_if_stats().keys()),"disks":[]}
         for p in psutil.disk_partitions(all=False):
             try:
                 u=psutil.disk_usage(p.mountpoint); data["disks"].append({"device":p.device,"total_gb":round(u.total/1024**3,2),"free_gb":round(u.free/1024**3,2),"used_percent":u.percent})
