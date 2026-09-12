@@ -287,11 +287,27 @@ class App(tk.Tk):
         self._button(bar,"فتح مدير المهام",lambda:self._async_custom("taskmgr")).pack(side="right",padx=3)
         self.proc=self.tree(f,("pid","name","cpu","ram"),("PID","العملية","CPU %","RAM %"))
     def _storage_controls(self):
-        f=self.pages["storage"]; self.storage=self.textbox(f); self._button(f,"فحص الأقراص",self.refresh_storage,True).pack(anchor="e",padx=24,pady=5)
+        f=self.pages["storage"]
+        self.storage=self.textbox(f)
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"فحص الأقراص",self.refresh_storage,True).pack(side="right",padx=3)
+        self._button(bar,"صحة الأقراص",self.refresh_disk_health).pack(side="right",padx=3)
+        self._button(bar,"إدارة الأقراص",lambda:self._async_custom("diskmgmt.msc")).pack(side="right",padx=3)
     def _network_controls(self):
-        f=self.pages["network"]; self.network=self.textbox(f); self._button(f,"فحص الشبكة",self.refresh_network,True).pack(anchor="e",padx=24,pady=5)
+        f=self.pages["network"]
+        self.network=self.textbox(f)
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"فحص الشبكة",self.refresh_network,True).pack(side="right",padx=3)
+        self._button(bar,"اختبار الاتصال",self.network_test).pack(side="right",padx=3)
+        self._button(bar,"عرض الاتصالات",lambda:self._async_command(["netstat","-ano"],self.network,30)).pack(side="right",padx=3)
+        self._button(bar,"إعدادات IP",lambda:self._async_command(["ipconfig","/all"],self.network,30)).pack(side="right",padx=3)
     def _security_controls(self):
-        f=self.pages["security"]; self.security=self.textbox(f); self._button(f,"فحص الأمان",self.refresh_security,True).pack(anchor="e",padx=24,pady=5)
+        f=self.pages["security"]
+        self.security=self.textbox(f,("Consolas",9))
+        bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
+        self._button(bar,"فحص شامل",self.refresh_security,True).pack(side="right",padx=3)
+        self._button(bar,"جدار الحماية",lambda:self._async_command(["netsh","advfirewall","show","allprofiles"],self.security,30)).pack(side="right",padx=3)
+        self._button(bar,"Windows Security",lambda:self._async_custom("windowsdefender:")).pack(side="right",padx=3)
     def _maintenance_controls(self):
         f=self.pages["maintenance"]
         actions=[
@@ -352,7 +368,7 @@ class App(tk.Tk):
         quick=tk.Frame(f,bg=BG); quick.pack(fill="x",padx=24,pady=4)
         for label,cmd in [
             ("SYSTEMINFO","systeminfo"),("IPCONFIG","ipconfig /all"),("TASKLIST","tasklist"),
-            ("NETSTAT","netstat -ano"),("SERVICES","sc query"),("DISK","wmic logicaldisk get caption,freespace,size"),
+            ("NETSTAT","netstat -ano"),("SERVICES","sc query"),("DISK","powershell -NoProfile -Command \"Get-Volume | Format-Table -AutoSize\""),
             ("POWER","powercfg /getactivescheme"),("WHOAMI","whoami /all")
         ]: self._button(quick,label,lambda c=cmd:self._set_command(c)).pack(side="right",padx=3)
         row=tk.Frame(f,bg=BG); row.pack(fill="x",padx=24,pady=6)
@@ -412,10 +428,26 @@ class App(tk.Tk):
         lines=[f"صلاحيات المسؤول: {'نعم' if is_admin() else 'لا'}"]
         if wmi:
             try:
-                for av in wmi.WMI().query("SELECT displayName, productState FROM AntiVirusProduct"): lines.append(f"مكافح الفيروسات: {av.displayName} | الحالة: {av.productState}")
-            except Exception as exc: lines.append(f"تعذر قراءة WMI للأمان: {exc}")
-        else: lines.append("WMI غير متاح؛ تم استخدام الموارد الأساسية فقط.")
-        self.replace(self.security,"\n".join(lines))
+                for av in wmi.WMI().query("SELECT displayName, productState FROM AntiVirusProduct"):
+                    lines.append(f"مكافح الفيروسات: {av.displayName} | الحالة: {av.productState}")
+            except Exception as exc:
+                lines.append(f"تعذر قراءة WMI للأمان: {exc}")
+        ps=r'''
+$fw=Get-NetFirewallProfile | Select-Object Name,Enabled,DefaultInboundAction,DefaultOutboundAction
+$def=Get-MpComputerStatus -ErrorAction SilentlyContinue | Select-Object AMServiceEnabled,AntivirusEnabled,RealTimeProtectionEnabled,AntispywareEnabled,AntivirusSignatureVersion
+"--- WINDOWS FIREWALL ---"
+$fw | Format-Table -AutoSize
+"--- MICROSOFT DEFENDER ---"
+$def | Format-List
+'''
+        def worker():
+            try:
+                code,out=run_native(["powershell","-NoProfile","-Command",ps],30)
+                text="\n".join(lines)+"\n\n"+out
+                self.after(0,lambda:self.replace(self.security,text))
+            except Exception as exc:
+                self.after(0,lambda:self.replace(self.security,"\n".join(lines)+f"\n{exc}"))
+        threading.Thread(target=worker,daemon=True).start()
     def kill_selected_process(self):
         selected=self.proc.selection()
         if not selected:
@@ -457,6 +489,21 @@ class App(tk.Tk):
     def refresh_software(self):
         ps=r'$paths=@("HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*","HKLM:\Software\Wow6432Node\Microsoft\Windows\CurrentVersion\Uninstall\*","HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\*"); Get-ItemProperty $paths -ErrorAction SilentlyContinue | Where-Object {$_.DisplayName} | Sort-Object DisplayName -Unique | Select-Object DisplayName,DisplayVersion,Publisher | Format-Table -AutoSize'
         self._async_command(["powershell","-NoProfile","-Command",ps],self.software,45)
+
+    def refresh_disk_health(self):
+        ps=r'Get-PhysicalDisk | Select-Object FriendlyName,MediaType,HealthStatus,OperationalStatus,Size | Format-Table -AutoSize'
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.storage,30)
+
+    def network_test(self):
+        ps=r'''
+"=== PING 1.1.1.1 ==="
+ping.exe -n 4 1.1.1.1
+"=== DNS TEST ==="
+Resolve-DnsName example.com -ErrorAction SilentlyContinue | Select-Object Name,Type,IPAddress | Format-Table -AutoSize
+"=== DEFAULT GATEWAY ==="
+Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway} | Select-Object InterfaceAlias,IPv4Address,IPv4DefaultGateway | Format-Table -AutoSize
+'''
+        self._async_command(["powershell","-NoProfile","-Command",ps],self.network,45)
 
     def refresh_services(self): self._async_command(["sc","query","type=","service","state=","all"],self.services,20)
     def refresh_startup(self): self._async_command(["reg","query",r"HKCU\Software\Microsoft\Windows\CurrentVersion\Run"],self.startup,15)
