@@ -20,13 +20,16 @@ try:
 except Exception:
     wmi = None
 
-BG = "#0f172a"
-PANEL = "#172033"
-PANEL2 = "#1e293b"
-TEXT = "#e5e7eb"
-MUTED = "#94a3b8"
-ACCENT = "#2563eb"
-WARN = "#f59e0b"
+BG = "#030712"
+PANEL = "#07111f"
+PANEL2 = "#0d1b2e"
+TEXT = "#dff7ff"
+MUTED = "#66809c"
+ACCENT = "#00d9ff"
+ACCENT2 = "#7c3aed"
+GOOD = "#00f5a0"
+WARN = "#ffb020"
+DANGER = "#ff4d6d"
 
 
 def is_admin() -> bool:
@@ -53,13 +56,12 @@ def run_native(command: list[str], timeout: int = 900) -> tuple[int, str]:
 class App(tk.Tk):
     def __init__(self) -> None:
         super().__init__()
-        self.title("أداة صيانة النظام")
+        self.title("SYSTEM MAINTENANCE // COMMAND DECK")
         self.geometry("1320x820")
         self.minsize(1100, 700)
         self.configure(bg=BG)
         self.protocol("WM_DELETE_WINDOW", self.destroy)
         self._build_style()
-        self._setup_icon()
         self._build_layout()
         self.show("dashboard")
         self.after(500, self.refresh_dashboard)
@@ -113,12 +115,15 @@ class App(tk.Tk):
     def _build_layout(self) -> None:
         head = tk.Frame(self, bg="#0b1220", height=66)
         head.pack(fill="x")
-        tk.Label(head, text="أداة صيانة النظام", bg="#0b1220", fg="white",
-                 font=("Segoe UI", 20, "bold")).pack(side="right", padx=24, pady=15)
-        self.status = tk.Label(head, text="جاهز", bg="#0b1220", fg="#93c5fd",
-                               font=("Segoe UI", 10))
+        tk.Label(head, text="◈ SYSTEM MAINTENANCE", bg="#040a14", fg=ACCENT,
+                 font=("Consolas", 18, "bold")).pack(side="right", padx=24, pady=15)
+        tk.Label(head, text="COMMAND DECK  //  WINDOWS", bg="#040a14", fg=MUTED,
+                 font=("Consolas", 9)).pack(side="right", padx=2, pady=19)
+        self.status = tk.Label(head, text="SYSTEM READY", bg="#040a14", fg=ACCENT,
+                               font=("Consolas", 9, "bold"))
         self.status.pack(side="left", padx=24)
-        tk.Label(head, text="● متصل ومراقب", bg="#0b1220", fg="#86efac", font=("Segoe UI", 9, "bold")).pack(side="left", padx=10)
+        tk.Label(head, text="● SYSTEM LINK ONLINE", bg="#040a14", fg=GOOD,
+                 font=("Consolas", 9, "bold")).pack(side="left", padx=10)
 
         body = tk.Frame(self, bg=BG)
         body.pack(fill="both", expand=True)
@@ -126,9 +131,11 @@ class App(tk.Tk):
         nav = tk.Frame(body, bg=PANEL, width=225)
         nav.pack(side="right", fill="y")
         nav.pack_propagate(False)
-        tk.Label(nav, text="SYSTEM MAINTENANCE", bg=PANEL, fg="#60a5fa",
+        tk.Label(nav, text="◈ FLIGHT SYSTEMS", bg=PANEL, fg=ACCENT,
                  font=("Segoe UI", 9, "bold")).pack(fill="x", padx=18, pady=(22, 4))
-        tk.Label(nav, text="مركز التحكم بالنظام", bg=PANEL, fg=MUTED, font=("Segoe UI", 9)).pack(fill="x", padx=18, pady=(0, 12))
+        tk.Label(nav, text="مركز قيادة وصيانة النظام", bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9)).pack(fill="x", padx=18, pady=(0, 12))
+        tk.Frame(nav, bg=ACCENT, height=1).pack(fill="x", padx=18, pady=(0, 10))
 
         items = [
             ("dashboard", "لوحة المعلومات"),
@@ -146,7 +153,7 @@ class App(tk.Tk):
         self.buttons: dict[str, tk.Button] = {}
         for key, title in items:
             b = tk.Button(nav, text=title, command=lambda k=key: self.show(k),
-                          bg=PANEL, fg=TEXT, activebackground=ACCENT,
+                          bg=PANEL, fg=TEXT, activebackground="#12384a",
                           activeforeground="white", relief="flat", bd=0,
                           anchor="e", padx=18, pady=9,
                           font=("Segoe UI", 10), cursor="hand2")
@@ -175,7 +182,7 @@ class App(tk.Tk):
         frame = tk.Frame(self.content, bg=BG)
         self.pages[key] = frame
         tk.Label(frame, text=title, bg=BG, fg="white",
-                 font=("Segoe UI", 18, "bold"), anchor="e").pack(
+                 font=("Consolas", 18, "bold"), anchor="e").pack(
                  fill="x", padx=24, pady=(22, 14))
         return frame
 
@@ -184,7 +191,7 @@ class App(tk.Tk):
             frame.pack_forget()
         self.pages[key].pack(fill="both", expand=True)
         for k, button in self.buttons.items():
-            button.configure(bg=ACCENT if k == key else PANEL)
+            button.configure(bg="#12384a" if k == key else PANEL, fg=ACCENT if k == key else TEXT)
         self.status.configure(text=self.buttons[key].cget("text"))
 
     def card(self, parent: tk.Frame, title: str, col: int, row: int) -> tk.Label:
@@ -209,7 +216,7 @@ class App(tk.Tk):
                  font=("Segoe UI", 10), anchor="e").pack(
                  fill="x", padx=14, pady=(12, 2))
         value = tk.Label(card, text="—", bg=PANEL, fg=TEXT,
-                         font=("Segoe UI", 20, "bold"), anchor="e")
+                         font=("Consolas", 20, "bold"), anchor="e")
         value.pack(fill="x", padx=14, pady=(0, 12))
         return value
 
@@ -316,13 +323,50 @@ class App(tk.Tk):
 
     def _command_controls(self) -> None:
         f = self.pages["commands"]
-        self.cmd_entry = tk.Entry(f, bg=PANEL2, fg=TEXT, insertbackground="white",
-                                  relief="flat", font=("Consolas", 11))
-        self.cmd_entry.pack(fill="x", padx=24, pady=8, ipady=8)
-        tk.Button(f, text="تنفيذ الأمر", command=self.run_custom_command,
-                  bg=ACCENT, fg="white", relief="flat", padx=18, pady=8).pack(
-                  anchor="e", padx=24, pady=5)
-        self.cmd_output = self.textbox(f, ("Consolas", 9))
+        top = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground=PANEL2)
+        top.pack(fill="x", padx=24, pady=(0, 8))
+        tk.Label(top, text="⌘  COMMAND TERMINAL", bg=PANEL, fg=ACCENT,
+                 font=("Consolas", 12, "bold")).pack(side="left", padx=16, pady=12)
+        tk.Label(top, text="محطة أوامر Windows المدمجة", bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 9)).pack(side="right", padx=16, pady=12)
+
+        quick = tk.Frame(f, bg=BG)
+        quick.pack(fill="x", padx=24, pady=4)
+        for label, cmd in [("SYSTEMINFO", "systeminfo"), ("IPCONFIG", "ipconfig"),
+                           ("TASKLIST", "tasklist"), ("SERVICES", "sc query"),
+                           ("WHOAMI", "whoami")]:
+            self._button(quick, label, lambda value=cmd: self._set_command(value)).pack(
+                side="right", padx=3)
+
+        row = tk.Frame(f, bg=BG)
+        row.pack(fill="x", padx=24, pady=6)
+        self.cmd_entry = tk.Entry(row, bg="#020812", fg=ACCENT, insertbackground=ACCENT,
+                                  relief="flat", font=("Consolas", 12))
+        self.cmd_entry.pack(side="right", fill="x", expand=True, ipady=10, padx=(0, 8))
+        self._button(row, "EXECUTE  ▶", self.run_custom_command, True).pack(side="right")
+
+        self.cmd_output = tk.Text(f, bg="#02050a", fg="#9be7ff", insertbackground=ACCENT,
+                                  relief="flat", wrap="none", font=("Consolas", 10))
+        self.cmd_output.pack(fill="both", expand=True, padx=24, pady=8)
+        self.cmd_output.insert("end",
+            "SYSTEM MAINTENANCE TERMINAL\n"
+            "════════════════════════════════════════════════════════════\n"
+            "LINK: ONLINE    SHELL: CMD.EXE    MODE: ADMIN-AWARE\n\n"
+            "PS> ")
+        self.cmd_output.configure(state="disabled")
+
+    def _button(self, parent, text, command, primary=False):
+        return tk.Button(parent, text=text, command=command,
+                         bg="#0c4050" if primary else PANEL2,
+                         fg=ACCENT if primary else TEXT,
+                         activebackground="#155e75", activeforeground="white",
+                         relief="flat", bd=0, padx=16, pady=9,
+                         font=("Consolas", 9, "bold"), cursor="hand2")
+
+    def _set_command(self, value: str) -> None:
+        self.cmd_entry.delete(0, "end")
+        self.cmd_entry.insert(0, value)
+        self.cmd_entry.focus_set()
 
     def _report_controls(self) -> None:
         f = self.pages["reports"]
@@ -373,9 +417,9 @@ class App(tk.Tk):
             self.du.config(text=self.uptime())
             self.da.config(text="نعم" if is_admin() else "لا")
             worst = max(cpu, ram, disk)
-            self.health.config(text=("الحالة: حرجة" if worst >= 90 else
-                                     "الحالة: تحتاج انتباه" if worst >= 75 else
-                                     "الحالة: جيدة"))
+            self.health.config(text=("● CRITICAL / حالة حرجة" if worst >= 90 else
+                                     "● ATTENTION / تحتاج انتباه" if worst >= 75 else
+                                     "● SYSTEM NOMINAL / النظام مستقر"))
         except Exception as exc:
             self.status.config(text=f"خطأ: {exc}")
 
@@ -463,14 +507,21 @@ class App(tk.Tk):
         self._async_custom(raw)
 
     def _async_custom(self, raw: str) -> None:
+        self._console_write("\nPS> " + raw + "\n")
         def worker() -> None:
             try:
                 code, output = run_native(["cmd", "/c", raw], 900)
-                self.after(0, lambda: self.replace(self.cmd_output,
-                                                   f"Exit code: {code}\n\n{output}"))
+                self.after(0, lambda: self._console_write(
+                    f"{output}\n\n[EXIT {code}]\nPS> "))
             except Exception as exc:
-                self.after(0, lambda: self.replace(self.cmd_output, str(exc)))
+                self.after(0, lambda: self._console_write(f"ERROR: {exc}\nPS> "))
         threading.Thread(target=worker, daemon=True).start()
+
+    def _console_write(self, text: str) -> None:
+        self.cmd_output.configure(state="normal")
+        self.cmd_output.insert("end", text)
+        self.cmd_output.see("end")
+        self.cmd_output.configure(state="disabled")
 
     def _async_command(self, cmd: list[str], target: tk.Text | None,
                        timeout: int, show_window: bool = False) -> None:
