@@ -61,12 +61,17 @@ class App(tk.Tk):
         self.after(3500, self._live_refresh)
 
     def _button(self, parent, text, command, primary=False):
-        return tk.Button(parent, text=text, command=command,
-                         bg="#0c4050" if primary else PANEL2,
-                         fg=ACCENT if primary else TEXT,
-                         activebackground="#155e75", activeforeground="white",
-                         relief="flat", bd=0, padx=16, pady=9,
-                         font=("Consolas", 9, "bold"), cursor="hand2")
+        b=tk.Button(parent,text=text,command=command,
+                     bg=ACCENT if primary else PANEL2,
+                     fg="#00131b" if primary else TEXT,
+                     activebackground="#38e8ff" if primary else "#17344b",
+                     activeforeground="#00131b" if primary else "white",
+                     relief="flat",bd=0,padx=18,pady=9,
+                     font=("Segoe UI",9,"bold"),cursor="hand2")
+        def enter(_): b.configure(bg="#38e8ff" if primary else "#17344b")
+        def leave(_): b.configure(bg=ACCENT if primary else PANEL2)
+        b.bind("<Enter>",enter); b.bind("<Leave>",leave)
+        return b
 
     def _build_style(self) -> None:
         s = ttk.Style(self)
@@ -79,49 +84,59 @@ class App(tk.Tk):
                     thickness=5)
 
     def _build_layout(self) -> None:
-        head = tk.Frame(self, bg="#040a14", height=70)
-        head.pack(fill="x")
-        tk.Label(head, text="◈ SYSTEM MAINTENANCE", bg="#040a14", fg=ACCENT,
-                 font=("Consolas", 18, "bold")).pack(side="right", padx=24, pady=15)
-        tk.Label(head, text="COMMAND DECK  //  WINDOWS", bg="#040a14", fg=MUTED,
-                 font=("Consolas", 9)).pack(side="right", padx=2, pady=19)
-        self.status = tk.Label(head, text="SYSTEM READY", bg="#040a14", fg=ACCENT,
-                               font=("Consolas", 9, "bold"))
-        self.status.pack(side="left", padx=24)
-        tk.Label(head, text="● SYSTEM LINK ONLINE", bg="#040a14", fg=GOOD,
-                 font=("Consolas", 9, "bold")).pack(side="left", padx=10)
+        # Modern WinAdmin-inspired shell: compact navigation + large command workspace.
+        head=tk.Frame(self,bg="#050b13",height=72)
+        head.pack(fill="x"); head.pack_propagate(False)
 
-        body = tk.Frame(self, bg=BG)
-        body.pack(fill="both", expand=True)
-        nav = tk.Frame(body, bg=PANEL, width=235)
-        nav.pack(side="right", fill="y")
-        nav.pack_propagate(False)
-        tk.Label(nav, text="◈ FLIGHT SYSTEMS", bg=PANEL, fg=ACCENT,
-                 font=("Segoe UI", 9, "bold")).pack(fill="x", padx=18, pady=(22, 4))
-        tk.Label(nav, text="مركز قيادة وصيانة النظام", bg=PANEL, fg=MUTED,
-                 font=("Segoe UI", 9)).pack(fill="x", padx=18, pady=(0, 12))
-        tk.Frame(nav, bg=ACCENT, height=1).pack(fill="x", padx=18, pady=(0, 10))
-        items = [
-            ("dashboard", "⌂  لوحة المعلومات"), ("system", "▣  معلومات النظام"),
-            ("processes", "◉  العمليات"), ("devices", "◈  الأجهزة والتعريفات"),
-            ("storage", "▤  التخزين"), ("network", "⌁  الشبكة"), ("security", "◆  الأمان"),
-            ("events", "◌  سجل الأحداث"), ("maintenance", "⚙  الصيانة والإصلاح"),
-            ("services", "▤  خدمات Windows"), ("startup", "↗  بدء التشغيل"),
-            ("software", "▦  البرامج المثبتة"), ("commands", "⌘  مركز الأوامر"),
-            ("reports", "▥  التقارير"),
+        brand=tk.Frame(head,bg="#050b13")
+        brand.pack(side="right",fill="y",padx=22)
+        tk.Label(brand,text="◈",bg="#050b13",fg=ACCENT,font=("Segoe UI",23,"bold")).pack(side="right",padx=(0,10),pady=10)
+        names=tk.Frame(brand,bg="#050b13"); names.pack(side="right",pady=10)
+        tk.Label(names,text="SYSTEM MAINTENANCE",bg="#050b13",fg=TEXT,font=("Segoe UI",13,"bold")).pack(anchor="e")
+        tk.Label(names,text="Windows Administration Center",bg="#050b13",fg=MUTED,font=("Segoe UI",8)).pack(anchor="e")
+
+        self.status=tk.Label(head,text="READY",bg="#050b13",fg=GOOD,font=("Consolas",9,"bold"))
+        self.status.pack(side="left",padx=22)
+        tk.Label(head,text="● ONLINE",bg="#050b13",fg=GOOD,font=("Consolas",9,"bold")).pack(side="left",padx=8)
+
+        body=tk.Frame(self,bg=BG); body.pack(fill="both",expand=True)
+        nav=tk.Frame(body,bg="#060d17",width=245,highlightthickness=1,highlightbackground="#102337")
+        nav.pack(side="right",fill="y"); nav.pack_propagate(False)
+
+        tk.Label(nav,text="WORKSPACE",bg="#060d17",fg=MUTED,font=("Consolas",8,"bold")).pack(fill="x",padx=18,pady=(20,8))
+        self.buttons={}
+        items=[
+            ("dashboard","⌂","لوحة المعلومات","OVERVIEW"),
+            ("system","▣","معلومات النظام","SYSTEM"),
+            ("processes","◉","العمليات","PROCESSES"),
+            ("devices","◈","الأجهزة والتعريفات","DEVICES"),
+            ("storage","▤","التخزين","STORAGE"),
+            ("network","⌁","الشبكة","NETWORK"),
+            ("security","◆","الأمان","SECURITY"),
+            ("events","◌","سجل الأحداث","EVENTS"),
+            ("maintenance","⚙","الصيانة والإصلاح","MAINTENANCE"),
+            ("services","▤","خدمات Windows","SERVICES"),
+            ("startup","↗","بدء التشغيل","STARTUP"),
+            ("software","▦","البرامج المثبتة","SOFTWARE"),
+            ("commands","⌘","مركز الأوامر","COMMAND CENTER"),
+            ("reports","▥","التقارير","REPORTS"),
         ]
-        self.buttons = {}
-        for key, title in items:
-            b = tk.Button(nav, text=title, command=lambda k=key: self.show(k), bg=PANEL, fg=TEXT,
-                          activebackground="#12384a", activeforeground="white", relief="flat", bd=0,
-                          anchor="e", padx=18, pady=9, font=("Segoe UI", 10), cursor="hand2")
-            b.pack(fill="x", padx=8, pady=1)
-            self.buttons[key] = b
-        self.content = tk.Frame(body, bg=BG)
-        self.content.pack(side="left", fill="both", expand=True)
-        self.pages = {}
-        for key, title in items:
-            self.page(key, title)
+        for key,icon,title,code in items:
+            b=tk.Button(nav,text=f"{icon}   {title}",command=lambda k=key:self.show(k),
+                        bg="#060d17",fg=TEXT,activebackground="#102c40",activeforeground="white",
+                        relief="flat",bd=0,anchor="e",padx=18,pady=8,
+                        font=("Segoe UI",9),cursor="hand2")
+            b.pack(fill="x",padx=9,pady=1); self.buttons[key]=b
+
+        foot=tk.Frame(nav,bg="#060d17"); foot.pack(side="bottom",fill="x",padx=18,pady=16)
+        tk.Frame(foot,bg="#123049",height=1).pack(fill="x",pady=(0,10))
+        tk.Label(foot,text=("ADMINISTRATOR" if is_admin() else "STANDARD USER"),bg="#060d17",
+                 fg=GOOD if is_admin() else WARN,font=("Consolas",8,"bold")).pack(anchor="e")
+        tk.Label(foot,text="Native Windows tools • No cloud",bg="#060d17",fg=MUTED,font=("Segoe UI",7)).pack(anchor="e",pady=(3,0))
+
+        self.content=tk.Frame(body,bg=BG); self.content.pack(side="left",fill="both",expand=True)
+        self.pages={}
+        for key,_,title,_ in items: self.page(key,title)
         self._dashboard_controls(); self._system_controls(); self._process_controls()
         self._devices_controls(); self._storage_controls(); self._network_controls()
         self._security_controls(); self._events_controls(); self._maintenance_controls()
@@ -147,76 +162,53 @@ class App(tk.Tk):
         self.status.configure(text=self.buttons[key].cget("text"))
 
     def _dashboard_controls(self) -> None:
-        f = self.pages["dashboard"]
+        f=self.pages["dashboard"]
+        hero=tk.Frame(f,bg=BG); hero.pack(fill="x",padx=28,pady=(22,10))
+        left=tk.Frame(hero,bg=BG); left.pack(side="left")
+        tk.Label(left,text="LIVE SYSTEM MONITOR",bg=BG,fg=ACCENT,font=("Consolas",9,"bold")).pack(anchor="w")
+        tk.Label(left,text="مركز مراقبة النظام",bg=BG,fg=TEXT,font=("Segoe UI",24,"bold")).pack(anchor="w",pady=(3,0))
+        tk.Label(left,text="مؤشرات مباشرة • تشخيص • صيانة • أوامر",bg=BG,fg=MUTED,font=("Segoe UI",9)).pack(anchor="w")
+        right=tk.Frame(hero,bg=PANEL,highlightthickness=1,highlightbackground="#153149")
+        right.pack(side="right",ipadx=14,ipady=9)
+        self.health=tk.Label(right,text="● النظام مستقر",bg=PANEL,fg=GOOD,font=("Segoe UI",10,"bold"))
+        self.health.pack(anchor="e")
+        self.health_detail=tk.Label(right,text="جاري قراءة المؤشرات...",bg=PANEL,fg=MUTED,font=("Segoe UI",8))
+        self.health_detail.pack(anchor="e",pady=(2,0))
 
-        # Clean WinAdmin-inspired command-center header.
-        top = tk.Frame(f, bg=BG)
-        top.pack(fill="x", padx=28, pady=(18, 8))
-        tk.Label(top, text="لوحة التحكم", bg=BG, fg=TEXT,
-                 font=("Segoe UI", 24, "bold")).pack(side="right")
-        tk.Label(top, text="SYSTEM OVERVIEW  /  LIVE TELEMETRY", bg=BG, fg=MUTED,
-                 font=("Consolas", 9)).pack(side="left", pady=10)
-        tk.Frame(f, bg="#1b3146", height=1).pack(fill="x", padx=28, pady=(0, 12))
+        gauges=tk.Frame(f,bg=BG); gauges.pack(fill="x",padx=22,pady=4)
+        for i in range(3): gauges.grid_columnconfigure(i,weight=1,uniform="g")
+        self.gauges={}
+        for col,(key,title,code,accent) in enumerate([
+            ("cpu","المعالج","CPU LOAD",ACCENT),("ram","الذاكرة","MEMORY",ACCENT2),("disk","التخزين","DISK",WARN)]):
+            card=tk.Frame(gauges,bg=PANEL,highlightthickness=1,highlightbackground="#12283b")
+            card.grid(row=0,column=col,sticky="nsew",padx=6)
+            tk.Label(card,text=code,bg=PANEL,fg=accent,font=("Consolas",8,"bold")).pack(anchor="e",padx=16,pady=(11,0))
+            cv=tk.Canvas(card,width=270,height=220,bg=PANEL,highlightthickness=0,bd=0)
+            cv.pack(fill="both",expand=True)
+            val=tk.Label(card,text="0%",bg=PANEL,fg=TEXT,font=("Consolas",18,"bold"))
+            val.pack(pady=(0,1))
+            tk.Label(card,text=title,bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(pady=(0,10))
+            self.gauges[key]={"canvas":cv,"value":val,"accent":accent}
+            self._draw_gauge(key,0)
 
-        status = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#16334a")
-        status.pack(fill="x", padx=28, pady=(0, 12))
-        self.health = tk.Label(status, text="● النظام مستقر", bg=PANEL, fg=GOOD,
-                               font=("Segoe UI", 11, "bold"))
-        self.health.pack(side="right", padx=18, pady=11)
-        self.health_detail = tk.Label(status, text="جاري قراءة مؤشرات النظام...", bg=PANEL,
-                                      fg=MUTED, font=("Segoe UI", 9))
-        self.health_detail.pack(side="left", padx=18, pady=11)
+        strip=tk.Frame(f,bg="#06101b",highlightthickness=1,highlightbackground="#112a3e")
+        strip.pack(fill="x",padx=28,pady=12)
+        self.dp=self._telemetry_item(strip,"العمليات","PROCESSES")
+        self.du=self._telemetry_item(strip,"مدة التشغيل","UPTIME")
+        self.da=self._telemetry_item(strip,"الصلاحيات","ADMIN")
+        self.speed=self._telemetry_item(strip,"سرعة المعالج","CLOCK")
+        self.net=self._telemetry_item(strip,"الشبكة","NETWORK")
 
-        # Three automotive-style analog gauges: CPU / RAM / DISK.
-        gauges = tk.Frame(f, bg=BG)
-        gauges.pack(fill="x", padx=22, pady=2)
-        for i in range(3):
-            gauges.grid_columnconfigure(i, weight=1, uniform="gauge")
-
-        self.gauges = {}
-        for col, (key, title, code, accent) in enumerate([
-            ("cpu", "المعالج", "CPU LOAD", ACCENT),
-            ("ram", "الذاكرة", "MEMORY", ACCENT2),
-            ("disk", "التخزين", "DISK USAGE", WARN),
-        ]):
-            card = tk.Frame(gauges, bg=PANEL, highlightthickness=1, highlightbackground="#142b40")
-            card.grid(row=0, column=col, sticky="nsew", padx=7)
-            tk.Label(card, text=code, bg=PANEL, fg=accent,
-                     font=("Consolas", 9, "bold")).pack(anchor="e", padx=16, pady=(12, 0))
-            canvas = tk.Canvas(card, width=285, height=235, bg=PANEL, bd=0,
-                               highlightthickness=0)
-            canvas.pack(fill="both", expand=True, pady=(0, 4))
-            value = tk.Label(card, text="0%", bg=PANEL, fg=TEXT,
-                             font=("Consolas", 22, "bold"))
-            value.pack(pady=(0, 1))
-            tk.Label(card, text=title, bg=PANEL, fg=MUTED,
-                     font=("Segoe UI", 10)).pack(pady=(0, 12))
-            self.gauges[key] = {"canvas": canvas, "value": value, "accent": accent}
-            self._draw_gauge(key, 0)
-
-        # Compact telemetry strip, deliberately similar to a professional admin console.
-        strip = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#142b40")
-        strip.pack(fill="x", padx=28, pady=12)
-        self.dp = self._telemetry_item(strip, "العمليات", "PROCESSES")
-        self.du = self._telemetry_item(strip, "مدة التشغيل", "UPTIME")
-        self.da = self._telemetry_item(strip, "الصلاحيات", "ADMIN")
-        self.speed = self._telemetry_item(strip, "سرعة المعالج", "CLOCK")
-        self.net = self._telemetry_item(strip, "الشبكة", "NETWORK")
-
-        actions = tk.Frame(f, bg=BG)
-        actions.pack(fill="x", padx=28, pady=2)
-        tk.Label(actions, text="إجراءات سريعة", bg=BG, fg=TEXT,
-                 font=("Segoe UI", 12, "bold")).pack(anchor="e", pady=(0, 7))
-        row = tk.Frame(actions, bg=BG)
-        row.pack(fill="x")
-        for title, fn, primary in [
-            ("فحص النظام", self.health_check, True),
-            ("تنظيف المؤقتات", self.clean_temp, False),
-            ("فحص SFC", lambda: self.command(["sfc", "/scannow"]), False),
-            ("تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"]), False),
-            ("محطة الأوامر", lambda: self.show("commands"), False),
-        ]:
-            self._button(row, title, fn, primary).pack(side="right", padx=4)
+        actions=tk.Frame(f,bg=BG); actions.pack(fill="x",padx=28,pady=(2,0))
+        tk.Label(actions,text="الوصول السريع",bg=BG,fg=TEXT,font=("Segoe UI",11,"bold")).pack(anchor="e",pady=(0,7))
+        row=tk.Frame(actions,bg=BG); row.pack(fill="x")
+        for title,fn,primary in [
+            ("فحص صحة النظام",self.health_check,True),
+            ("تنظيف المؤقتات",self.clean_temp,False),
+            ("SFC",lambda:self.command(["sfc","/scannow"]),False),
+            ("DNS",lambda:self.command(["ipconfig","/flushdns"]),False),
+            ("مركز الأوامر",lambda:self.show("commands"),False)]:
+            self._button(row,title,fn,primary).pack(side="right",padx=4)
 
     def _telemetry_item(self, parent, title, code):
         box = tk.Frame(parent, bg=PANEL)
@@ -230,52 +222,37 @@ class App(tk.Tk):
                  font=("Segoe UI", 8)).pack(anchor="e")
         return value
 
-    def _draw_gauge(self, key, value):
-        g = self.gauges[key]
-        c = g["canvas"]
-        c.delete("all")
-        w = max(c.winfo_width(), 285)
-        h = 235
-        cx, cy = w / 2, 127
-        r = 92
-        start, extent = 135, 270
-
-        # Outer bezel and segmented scale.
-        c.create_oval(cx-r-9, cy-r-9, cx+r+9, cy+r+9,
-                      outline="#10263a", width=2)
-        c.create_arc(cx-r, cy-r, cx+r, cy+r, start=start, extent=extent,
-                     style="arc", outline="#263b4d", width=13)
-        c.create_arc(cx-r, cy-r, cx+r, cy+r, start=start, extent=extent*(max(0,min(100,value))/100),
-                     style="arc", outline=g["accent"], width=13)
-
+    def _draw_gauge(self,key,value):
+        g=self.gauges[key]; c=g["canvas"]; c.delete("all")
+        w=max(c.winfo_width(),270); cx=w/2; cy=112; r=86
         import math
-        for i in range(0, 21):
-            pct = i / 20
-            angle = math.radians(start + extent * pct)
-            outer = r + 1
-            inner = r - (15 if i % 2 == 0 else 9)
-            x1, y1 = cx + outer*math.cos(angle), cy - outer*math.sin(angle)
-            x2, y2 = cx + inner*math.cos(angle), cy - inner*math.sin(angle)
-            c.create_line(x1, y1, x2, y2,
-                          fill="#8aa0b4" if i % 2 == 0 else "#3c5368",
-                          width=2 if i % 2 == 0 else 1)
-
-        # Digital scale labels.
-        for n in (0, 25, 50, 75, 100):
-            pct = n / 100
-            angle = math.radians(start + extent * pct)
-            rr = r - 28
-            x, y = cx + rr*math.cos(angle), cy - rr*math.sin(angle)
-            c.create_text(x, y, text=str(n), fill=MUTED,
-                          font=("Consolas", 8, "bold"))
-
-        # Needle, like a performance gauge.
-        angle = math.radians(start + extent * (max(0,min(100,value))/100))
-        nx, ny = cx + (r-22)*math.cos(angle), cy - (r-22)*math.sin(angle)
-        c.create_line(cx, cy, nx, ny, fill=TEXT, width=3)
-        c.create_oval(cx-7, cy-7, cx+7, cy+7, fill=g["accent"], outline=TEXT, width=1)
-        c.create_text(cx, cy+28, text=f"{value:.0f}%", fill=TEXT,
-                      font=("Consolas", 20, "bold"))
+        start,extent=135,270; v=max(0,min(100,float(value)))
+        # Instrument bezel / face.
+        c.create_oval(cx-r-13,cy-r-13,cx+r+13,cy+r+13,fill="#040a12",outline="#1d3448",width=2)
+        c.create_oval(cx-r+8,cy-r+8,cx+r-8,cy+r-8,fill=PANEL,outline="#0c1b2b",width=2)
+        # Danger band.
+        c.create_arc(cx-r,cy-r,cx+r,cy+r,start=start+extent*.9,extent=extent*.1,
+                     style="arc",outline=DANGER,width=10)
+        c.create_arc(cx-r,cy-r,cx+r,cy+r,start=start,extent=extent,
+                     style="arc",outline="#20374b",width=10)
+        c.create_arc(cx-r,cy-r,cx+r,cy+r,start=start,extent=extent*v/100,
+                     style="arc",outline=g["accent"],width=10)
+        # Precision ticks.
+        for i in range(41):
+            pct=i/40; a=math.radians(start+extent*pct)
+            ro=r+1; ri=r-(13 if i%4==0 else 8)
+            x1,y1=cx+ro*math.cos(a),cy-ro*math.sin(a); x2,y2=cx+ri*math.cos(a),cy-ri*math.sin(a)
+            c.create_line(x1,y1,x2,y2,fill="#9eb0bf" if i%4==0 else "#3a5368",width=2 if i%4==0 else 1)
+        for n in (0,25,50,75,100):
+            a=math.radians(start+extent*n/100); rr=r-25
+            c.create_text(cx+rr*math.cos(a),cy-rr*math.sin(a),text=str(n),fill=MUTED,font=("Consolas",7,"bold"))
+        # Needle and hub.
+        a=math.radians(start+extent*v/100); nx,ny=cx+(r-20)*math.cos(a),cy-(r-20)*math.sin(a)
+        c.create_line(cx,cy,nx,ny,fill="#eafcff",width=3)
+        c.create_oval(cx-6,cy-6,cx+6,cy+6,fill=g["accent"],outline="#dff7ff",width=1)
+        c.create_text(cx,cy+29,text=f"{v:.0f}%",fill=TEXT,font=("Consolas",18,"bold"))
+        state="NORMAL" if v<75 else "HIGH" if v<90 else "CRITICAL"
+        c.create_text(cx,cy+49,text=state,fill=g["accent"] if v<75 else WARN if v<90 else DANGER,font=("Consolas",7,"bold"))
 
     def _system_controls(self):
         f=self.pages["system"]; self.system=self.textbox(f); self._button(f,"تحديث",self.refresh_system,True).pack(anchor="e",padx=24,pady=5)
