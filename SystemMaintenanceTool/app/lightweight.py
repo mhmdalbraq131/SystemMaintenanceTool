@@ -138,17 +138,17 @@ class App(tk.Tk):
         tk.Frame(nav, bg=ACCENT, height=1).pack(fill="x", padx=18, pady=(0, 10))
 
         items = [
-            ("dashboard", "لوحة المعلومات"),
-            ("system", "معلومات النظام"),
-            ("processes", "العمليات"),
-            ("storage", "التخزين"),
-            ("network", "الشبكة"),
-            ("security", "الأمان"),
-            ("maintenance", "الصيانة والإصلاح"),
-            ("services", "خدمات Windows"),
-            ("startup", "بدء التشغيل"),
-            ("commands", "مركز الأوامر"),
-            ("reports", "التقارير"),
+            ("dashboard", "⌂  لوحة المعلومات"),
+            ("system", "▣  معلومات النظام"),
+            ("processes", "◉  العمليات"),
+            ("storage", "▤  التخزين"),
+            ("network", "⌁  الشبكة"),
+            ("security", "◆  الأمان"),
+            ("maintenance", "⚙  الصيانة والإصلاح"),
+            ("services", "▤  خدمات Windows"),
+            ("startup", "↗  بدء التشغيل"),
+            ("commands", "⌘  محطة الأوامر"),
+            ("reports", "▥  التقارير"),
         ]
         self.buttons: dict[str, tk.Button] = {}
         for key, title in items:
@@ -222,32 +222,106 @@ class App(tk.Tk):
 
     def _dashboard_controls(self) -> None:
         f = self.pages["dashboard"]
-        for i in range(3):
-            f.grid_columnconfigure(i, weight=1)
-        self.dc = self.card(f, "المعالج", 0, 0)
-        self.dr = self.card(f, "الذاكرة", 1, 0)
-        self.dd = self.card(f, "القرص", 2, 0)
-        self.dp = self.card(f, "العمليات", 0, 1)
-        self.du = self.card(f, "مدة التشغيل", 1, 1)
-        self.da = self.card(f, "صلاحيات المسؤول", 2, 1)
 
-        # Quick actions give the dashboard a real control-center feel.
-        actions = tk.Frame(f, bg=BG)
-        actions.pack(fill="x", padx=12, pady=6)
-        tk.Label(actions, text="إجراءات سريعة", bg=BG, fg="white", font=("Segoe UI", 11, "bold"), anchor="e").pack(fill="x", pady=(4, 6))
-        action_row = tk.Frame(actions, bg=BG)
-        action_row.pack(fill="x")
-        self._button(action_row, "🧹 تنظيف الملفات المؤقتة", self.clean_temp).pack(side="right", padx=4)
-        self._button(action_row, "🔍 فحص الصحة", self.health_check, True).pack(side="right", padx=4)
-        self._button(action_row, "🛠 فحص SFC", lambda: self.command(["sfc", "/scannow"])).pack(side="right", padx=4)
-        self._button(action_row, "🌐 تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"])).pack(side="right", padx=4)
+        # --- Command-deck hero -------------------------------------------------
+        hero = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#12304a")
+        hero.pack(fill="x", padx=24, pady=(0, 12))
 
-        box = tk.Frame(f, bg=PANEL)
-        box.pack(fill="x", padx=12, pady=10)
-        self.health = tk.Label(box, text="جاري القراءة...", bg=PANEL,
-                               fg="#93c5fd", font=("Segoe UI", 12), anchor="e")
-        self.health.pack(fill="x", padx=16, pady=16)
-        self._button(box, "فحص صحة النظام", self.health_check, True).pack(anchor="e", padx=16, pady=(0, 16))
+        left = tk.Frame(hero, bg=PANEL)
+        left.pack(side="left", fill="y", padx=22, pady=18)
+        tk.Label(left, text="● LIVE MONITORING", bg=PANEL, fg=GOOD,
+                 font=("Consolas", 9, "bold")).pack(anchor="w")
+        self.health = tk.Label(left, text="SYSTEM NOMINAL",
+                               bg=PANEL, fg=TEXT, font=("Segoe UI", 11, "bold"))
+        self.health.pack(anchor="w", pady=(8, 0))
+
+        right = tk.Frame(hero, bg=PANEL)
+        right.pack(side="right", fill="both", expand=True, padx=24, pady=15)
+        tk.Label(right, text="لوحة القيادة", bg=PANEL, fg=TEXT,
+                 font=("Segoe UI", 24, "bold"), anchor="e").pack(fill="x")
+        tk.Label(right, text="مراقبة النظام والتحكم والصيانة في مكان واحد",
+                 bg=PANEL, fg=MUTED, font=("Segoe UI", 10), anchor="e").pack(fill="x", pady=(2, 0))
+
+        # --- Live telemetry ----------------------------------------------------
+        telemetry = tk.Frame(f, bg=BG)
+        telemetry.pack(fill="x", padx=18, pady=2)
+        for col in range(3):
+            telemetry.grid_columnconfigure(col, weight=1, uniform="telemetry")
+
+        self.metric_bars = {}
+        self.metric_values = {}
+        specs = [
+            ("المعالج", "CPU", "dc", 0, ACCENT),
+            ("الذاكرة", "RAM", "dr", 1, ACCENT2),
+            ("التخزين", "DISK", "dd", 2, WARN),
+        ]
+        for title, code, attr, col, accent in specs:
+            box = tk.Frame(telemetry, bg=PANEL, highlightthickness=1,
+                           highlightbackground="#13263b")
+            box.grid(row=0, column=col, sticky="nsew", padx=6, pady=6)
+            top = tk.Frame(box, bg=PANEL)
+            top.pack(fill="x", padx=16, pady=(14, 4))
+            tk.Label(top, text=code, bg=PANEL, fg=accent,
+                     font=("Consolas", 9, "bold")).pack(side="left")
+            tk.Label(top, text=title, bg=PANEL, fg=MUTED,
+                     font=("Segoe UI", 10, "bold")).pack(side="right")
+            value = tk.Label(box, text="0%", bg=PANEL, fg=TEXT,
+                             font=("Consolas", 25, "bold"), anchor="e")
+            value.pack(fill="x", padx=16)
+            bar = ttk.Progressbar(box, maximum=100, mode="determinate")
+            bar.pack(fill="x", padx=16, pady=(7, 16))
+            setattr(self, attr, value)
+            self.metric_values[attr] = value
+            self.metric_bars[attr] = bar
+
+        # --- Secondary telemetry ----------------------------------------------
+        info = tk.Frame(f, bg=BG)
+        info.pack(fill="x", padx=18, pady=2)
+        for col in range(3):
+            info.grid_columnconfigure(col, weight=1, uniform="info")
+
+        secondary = [
+            ("العمليات", "PROCESSES", "dp", 0),
+            ("مدة التشغيل", "UPTIME", "du", 1),
+            ("صلاحيات المسؤول", "PRIVILEGES", "da", 2),
+        ]
+        for title, code, attr, col in secondary:
+            box = tk.Frame(info, bg="#091522", highlightthickness=1,
+                           highlightbackground="#13263b")
+            box.grid(row=0, column=col, sticky="nsew", padx=6, pady=6)
+            tk.Label(box, text=code, bg="#091522", fg=MUTED,
+                     font=("Consolas", 8, "bold")).pack(anchor="e", padx=14, pady=(10, 0))
+            value = tk.Label(box, text="—", bg="#091522", fg=TEXT,
+                             font=("Segoe UI", 14, "bold"), anchor="e")
+            value.pack(fill="x", padx=14, pady=(2, 12))
+            setattr(self, attr, value)
+
+        # --- Quick launch ------------------------------------------------------
+        launch = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#13263b")
+        launch.pack(fill="x", padx=24, pady=(12, 0))
+        tk.Label(launch, text="QUICK LAUNCH", bg=PANEL, fg=ACCENT,
+                 font=("Consolas", 9, "bold")).pack(anchor="e", padx=18, pady=(12, 4))
+        row = tk.Frame(launch, bg=PANEL)
+        row.pack(fill="x", padx=12, pady=(2, 14))
+        actions = [
+            ("فحص النظام", self.health_check, True),
+            ("تنظيف المؤقتات", self.clean_temp, False),
+            ("فحص SFC", lambda: self.command(["sfc", "/scannow"]), False),
+            ("تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"]), False),
+            ("محطة الأوامر", lambda: self.show("commands"), False),
+        ]
+        for title, fn, primary in actions:
+            self._button(row, title, fn, primary).pack(side="right", padx=4)
+
+        # Keep the lower health panel compact and informative.
+        detail = tk.Frame(f, bg="#091522", highlightthickness=1, highlightbackground="#13263b")
+        detail.pack(fill="x", padx=24, pady=10)
+        tk.Label(detail, text="SYSTEM DIAGNOSTICS", bg="#091522", fg=MUTED,
+                 font=("Consolas", 8, "bold")).pack(anchor="e", padx=16, pady=(10, 0))
+        self.health_detail = tk.Label(detail, text="جاري قراءة مؤشرات النظام...",
+                                      bg="#091522", fg=TEXT,
+                                      font=("Segoe UI", 10), anchor="e")
+        self.health_detail.pack(fill="x", padx=16, pady=(3, 12))
 
     def _system_controls(self) -> None:
         f = self.pages["system"]
@@ -410,9 +484,12 @@ class App(tk.Tk):
             disk = max((psutil.disk_usage(p.mountpoint).percent
                         for p in psutil.disk_partitions(all=False)
                         if os.path.exists(p.mountpoint)), default=0)
-            self.dc.config(text=f"{cpu:.0f}%")
+                self.dc.config(text=f"{cpu:.0f}%")
             self.dr.config(text=f"{ram:.0f}%")
             self.dd.config(text=f"{disk:.0f}%")
+            self.metric_bars["dc"]["value"] = cpu
+            self.metric_bars["dr"]["value"] = ram
+            self.metric_bars["dd"]["value"] = disk
             self.dp.config(text=str(len(psutil.pids())))
             self.du.config(text=self.uptime())
             self.da.config(text="نعم" if is_admin() else "لا")
@@ -420,6 +497,8 @@ class App(tk.Tk):
             self.health.config(text=("● CRITICAL / حالة حرجة" if worst >= 90 else
                                      "● ATTENTION / تحتاج انتباه" if worst >= 75 else
                                      "● SYSTEM NOMINAL / النظام مستقر"))
+            self.health_detail.config(
+                text=f"CPU {cpu:.0f}%   •   RAM {ram:.0f}%   •   DISK {disk:.0f}%   •   PROCESSES {len(psutil.pids())}")
         except Exception as exc:
             self.status.config(text=f"خطأ: {exc}")
 
