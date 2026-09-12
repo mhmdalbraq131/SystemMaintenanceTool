@@ -145,55 +145,134 @@ class App(tk.Tk):
 
     def _dashboard_controls(self) -> None:
         f = self.pages["dashboard"]
-        hero = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#15344b")
-        hero.pack(fill="x", padx=24, pady=(0, 10))
-        left = tk.Frame(hero, bg=PANEL); left.pack(side="left", padx=22, pady=17)
-        tk.Label(left, text="● LIVE MONITORING", bg=PANEL, fg=GOOD, font=("Consolas", 9, "bold")).pack(anchor="w")
-        self.health = tk.Label(left, text="SYSTEM NOMINAL", bg=PANEL, fg=TEXT, font=("Segoe UI", 11, "bold"))
-        self.health.pack(anchor="w", pady=(7, 0))
-        right = tk.Frame(hero, bg=PANEL); right.pack(side="right", fill="both", expand=True, padx=24, pady=13)
-        tk.Label(right, text="لوحة القيادة", bg=PANEL, fg=TEXT, font=("Segoe UI", 24, "bold"), anchor="e").pack(fill="x")
-        tk.Label(right, text="مراقبة النظام والتحكم والصيانة في مكان واحد", bg=PANEL, fg=MUTED,
-                 font=("Segoe UI", 10), anchor="e").pack(fill="x", pady=(2, 0))
 
-        telemetry = tk.Frame(f, bg=BG); telemetry.pack(fill="x", padx=18)
-        for i in range(3): telemetry.grid_columnconfigure(i, weight=1, uniform="telemetry")
-        self.metric_bars = {}; specs = [("المعالج", "CPU", "dc", ACCENT), ("الذاكرة", "RAM", "dr", ACCENT2), ("التخزين", "DISK", "dd", WARN)]
-        for title, code, attr, color in specs:
-            box = tk.Frame(telemetry, bg=PANEL, highlightthickness=1, highlightbackground="#13283b")
-            box.grid(row=0, column=len(self.metric_bars), sticky="nsew", padx=6, pady=6)
-            top = tk.Frame(box, bg=PANEL); top.pack(fill="x", padx=16, pady=(13, 3))
-            tk.Label(top, text=code, bg=PANEL, fg=color, font=("Consolas", 9, "bold")).pack(side="left")
-            tk.Label(top, text=title, bg=PANEL, fg=MUTED, font=("Segoe UI", 10, "bold")).pack(side="right")
-            value = tk.Label(box, text="0%", bg=PANEL, fg=TEXT, font=("Consolas", 25, "bold"), anchor="e")
-            value.pack(fill="x", padx=16)
-            bar = ttk.Progressbar(box, maximum=100, mode="determinate"); bar.pack(fill="x", padx=16, pady=(7, 15))
-            setattr(self, attr, value); self.metric_bars[attr] = bar
+        # Clean WinAdmin-inspired command-center header.
+        top = tk.Frame(f, bg=BG)
+        top.pack(fill="x", padx=28, pady=(18, 8))
+        tk.Label(top, text="لوحة التحكم", bg=BG, fg=TEXT,
+                 font=("Segoe UI", 24, "bold")).pack(side="right")
+        tk.Label(top, text="SYSTEM OVERVIEW  /  LIVE TELEMETRY", bg=BG, fg=MUTED,
+                 font=("Consolas", 9)).pack(side="left", pady=10)
+        tk.Frame(f, bg="#1b3146", height=1).pack(fill="x", padx=28, pady=(0, 12))
 
-        info = tk.Frame(f, bg=BG); info.pack(fill="x", padx=18)
-        for i in range(3): info.grid_columnconfigure(i, weight=1, uniform="info")
-        for col, (title, code, attr) in enumerate([("العمليات", "PROCESSES", "dp"), ("مدة التشغيل", "UPTIME", "du"), ("صلاحيات المسؤول", "PRIVILEGES", "da")]):
-            box = tk.Frame(info, bg="#091522", highlightthickness=1, highlightbackground="#13283b")
-            box.grid(row=0, column=col, sticky="nsew", padx=6, pady=6)
-            tk.Label(box, text=code, bg="#091522", fg=MUTED, font=("Consolas", 8, "bold")).pack(anchor="e", padx=14, pady=(9, 0))
-            v = tk.Label(box, text="—", bg="#091522", fg=TEXT, font=("Segoe UI", 14, "bold"), anchor="e")
-            v.pack(fill="x", padx=14, pady=(2, 11)); setattr(self, attr, v)
+        status = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#16334a")
+        status.pack(fill="x", padx=28, pady=(0, 12))
+        self.health = tk.Label(status, text="● النظام مستقر", bg=PANEL, fg=GOOD,
+                               font=("Segoe UI", 11, "bold"))
+        self.health.pack(side="right", padx=18, pady=11)
+        self.health_detail = tk.Label(status, text="جاري قراءة مؤشرات النظام...", bg=PANEL,
+                                      fg=MUTED, font=("Segoe UI", 9))
+        self.health_detail.pack(side="left", padx=18, pady=11)
 
-        launch = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#13283b")
-        launch.pack(fill="x", padx=24, pady=(12, 0))
-        tk.Label(launch, text="QUICK LAUNCH", bg=PANEL, fg=ACCENT, font=("Consolas", 9, "bold")).pack(anchor="e", padx=18, pady=(11, 4))
-        row = tk.Frame(launch, bg=PANEL); row.pack(fill="x", padx=12, pady=(2, 13))
-        for title, fn, primary in [("فحص النظام", self.health_check, True), ("تنظيف المؤقتات", self.clean_temp, False),
-                                   ("فحص SFC", lambda: self.command(["sfc", "/scannow"]), False),
-                                   ("تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"]), False),
-                                   ("محطة الأوامر", lambda: self.show("commands"), False)]:
+        # Three automotive-style analog gauges: CPU / RAM / DISK.
+        gauges = tk.Frame(f, bg=BG)
+        gauges.pack(fill="x", padx=22, pady=2)
+        for i in range(3):
+            gauges.grid_columnconfigure(i, weight=1, uniform="gauge")
+
+        self.gauges = {}
+        for col, (key, title, code, accent) in enumerate([
+            ("cpu", "المعالج", "CPU LOAD", ACCENT),
+            ("ram", "الذاكرة", "MEMORY", ACCENT2),
+            ("disk", "التخزين", "DISK USAGE", WARN),
+        ]):
+            card = tk.Frame(gauges, bg=PANEL, highlightthickness=1, highlightbackground="#142b40")
+            card.grid(row=0, column=col, sticky="nsew", padx=7)
+            tk.Label(card, text=code, bg=PANEL, fg=accent,
+                     font=("Consolas", 9, "bold")).pack(anchor="e", padx=16, pady=(12, 0))
+            canvas = tk.Canvas(card, width=285, height=235, bg=PANEL, bd=0,
+                               highlightthickness=0)
+            canvas.pack(fill="both", expand=True, pady=(0, 4))
+            value = tk.Label(card, text="0%", bg=PANEL, fg=TEXT,
+                             font=("Consolas", 22, "bold"))
+            value.pack(pady=(0, 1))
+            tk.Label(card, text=title, bg=PANEL, fg=MUTED,
+                     font=("Segoe UI", 10)).pack(pady=(0, 12))
+            self.gauges[key] = {"canvas": canvas, "value": value, "accent": accent}
+            self._draw_gauge(key, 0)
+
+        # Compact telemetry strip, deliberately similar to a professional admin console.
+        strip = tk.Frame(f, bg=PANEL, highlightthickness=1, highlightbackground="#142b40")
+        strip.pack(fill="x", padx=28, pady=12)
+        self.dp = self._telemetry_item(strip, "العمليات", "PROCESSES")
+        self.du = self._telemetry_item(strip, "مدة التشغيل", "UPTIME")
+        self.da = self._telemetry_item(strip, "الصلاحيات", "ADMIN")
+        self.speed = self._telemetry_item(strip, "سرعة المعالج", "CLOCK")
+        self.net = self._telemetry_item(strip, "الشبكة", "NETWORK")
+
+        actions = tk.Frame(f, bg=BG)
+        actions.pack(fill="x", padx=28, pady=2)
+        tk.Label(actions, text="إجراءات سريعة", bg=BG, fg=TEXT,
+                 font=("Segoe UI", 12, "bold")).pack(anchor="e", pady=(0, 7))
+        row = tk.Frame(actions, bg=BG)
+        row.pack(fill="x")
+        for title, fn, primary in [
+            ("فحص النظام", self.health_check, True),
+            ("تنظيف المؤقتات", self.clean_temp, False),
+            ("فحص SFC", lambda: self.command(["sfc", "/scannow"]), False),
+            ("تفريغ DNS", lambda: self.command(["ipconfig", "/flushdns"]), False),
+            ("محطة الأوامر", lambda: self.show("commands"), False),
+        ]:
             self._button(row, title, fn, primary).pack(side="right", padx=4)
-        detail = tk.Frame(f, bg="#091522", highlightthickness=1, highlightbackground="#13283b")
-        detail.pack(fill="x", padx=24, pady=10)
-        tk.Label(detail, text="SYSTEM DIAGNOSTICS", bg="#091522", fg=MUTED, font=("Consolas", 8, "bold")).pack(anchor="e", padx=16, pady=(9, 0))
-        self.health_detail = tk.Label(detail, text="جاري قراءة مؤشرات النظام...", bg="#091522", fg=TEXT,
-                                      font=("Segoe UI", 10), anchor="e")
-        self.health_detail.pack(fill="x", padx=16, pady=(3, 11))
+
+    def _telemetry_item(self, parent, title, code):
+        box = tk.Frame(parent, bg=PANEL)
+        box.pack(side="right", fill="x", expand=True, padx=10, pady=10)
+        tk.Label(box, text=code, bg=PANEL, fg=MUTED,
+                 font=("Consolas", 7, "bold")).pack(anchor="e")
+        value = tk.Label(box, text="—", bg=PANEL, fg=TEXT,
+                         font=("Segoe UI", 12, "bold"))
+        value.pack(anchor="e")
+        tk.Label(box, text=title, bg=PANEL, fg=MUTED,
+                 font=("Segoe UI", 8)).pack(anchor="e")
+        return value
+
+    def _draw_gauge(self, key, value):
+        g = self.gauges[key]
+        c = g["canvas"]
+        c.delete("all")
+        w = max(c.winfo_width(), 285)
+        h = 235
+        cx, cy = w / 2, 127
+        r = 92
+        start, extent = 135, 270
+
+        # Outer bezel and segmented scale.
+        c.create_oval(cx-r-9, cy-r-9, cx+r+9, cy+r+9,
+                      outline="#10263a", width=2)
+        c.create_arc(cx-r, cy-r, cx+r, cy+r, start=start, extent=extent,
+                     style="arc", outline="#263b4d", width=13)
+        c.create_arc(cx-r, cy-r, cx+r, cy+r, start=start, extent=extent*(max(0,min(100,value))/100),
+                     style="arc", outline=g["accent"], width=13)
+
+        import math
+        for i in range(0, 21):
+            pct = i / 20
+            angle = math.radians(start + extent * pct)
+            outer = r + 1
+            inner = r - (15 if i % 2 == 0 else 9)
+            x1, y1 = cx + outer*math.cos(angle), cy - outer*math.sin(angle)
+            x2, y2 = cx + inner*math.cos(angle), cy - inner*math.sin(angle)
+            c.create_line(x1, y1, x2, y2,
+                          fill="#8aa0b4" if i % 2 == 0 else "#3c5368",
+                          width=2 if i % 2 == 0 else 1)
+
+        # Digital scale labels.
+        for n in (0, 25, 50, 75, 100):
+            pct = n / 100
+            angle = math.radians(start + extent * pct)
+            rr = r - 28
+            x, y = cx + rr*math.cos(angle), cy - rr*math.sin(angle)
+            c.create_text(x, y, text=str(n), fill=MUTED,
+                          font=("Consolas", 8, "bold"))
+
+        # Needle, like a performance gauge.
+        angle = math.radians(start + extent * (max(0,min(100,value))/100))
+        nx, ny = cx + (r-22)*math.cos(angle), cy - (r-22)*math.sin(angle)
+        c.create_line(cx, cy, nx, ny, fill=TEXT, width=3)
+        c.create_oval(cx-7, cy-7, cx+7, cy+7, fill=g["accent"], outline=TEXT, width=1)
+        c.create_text(cx, cy+28, text=f"{value:.0f}%", fill=TEXT,
+                      font=("Consolas", 20, "bold"))
 
     def _system_controls(self):
         f=self.pages["system"]; self.system=self.textbox(f); self._button(f,"تحديث",self.refresh_system,True).pack(anchor="e",padx=24,pady=5)
@@ -246,11 +325,17 @@ class App(tk.Tk):
         try:
             cpu=psutil.cpu_percent(None); ram=psutil.virtual_memory().percent
             disk=max((psutil.disk_usage(p.mountpoint).percent for p in psutil.disk_partitions(all=False) if os.path.exists(p.mountpoint)),default=0)
-            self.dc.config(text=f"{cpu:.0f}%"); self.dr.config(text=f"{ram:.0f}%"); self.dd.config(text=f"{disk:.0f}%")
-            self.metric_bars["dc"]["value"]=cpu; self.metric_bars["dr"]["value"]=ram; self.metric_bars["dd"]["value"]=disk
+            self._draw_gauge("cpu", cpu); self._draw_gauge("ram", ram); self._draw_gauge("disk", disk)
             procs=len(psutil.pids()); self.dp.config(text=str(procs)); self.du.config(text=self.uptime()); self.da.config(text="نعم" if is_admin() else "لا")
-            worst=max(cpu,ram,disk); state="● CRITICAL / حالة حرجة" if worst>=90 else "● ATTENTION / تحتاج انتباه" if worst>=75 else "● SYSTEM NOMINAL / النظام مستقر"
-            self.health.config(text=state); self.health_detail.config(text=f"CPU {cpu:.0f}%   •   RAM {ram:.0f}%   •   DISK {disk:.0f}%   •   PROCESSES {procs}")
+            try:
+                freq=psutil.cpu_freq()
+                self.speed.config(text=f"{freq.current/1000:.2f} GHz" if freq and freq.current else "—")
+            except Exception:
+                self.speed.config(text="—")
+            self.net.config(text="متصل" if any(x.isup() for x in psutil.net_if_stats().values()) else "غير متصل")
+            worst=max(cpu,ram,disk); state="● حالة حرجة" if worst>=90 else "● تحتاج انتباه" if worst>=75 else "● النظام مستقر"
+            self.health.config(text=state)
+            self.health_detail.config(text=f"CPU {cpu:.0f}%   •   RAM {ram:.0f}%   •   DISK {disk:.0f}%   •   PROCESSES {procs}")
         except Exception as exc: self.status.config(text=f"خطأ: {exc}")
     def refresh_system(self):
         lines=[f"اسم الجهاز: {socket.gethostname()}",f"النظام: {platform.platform()}",f"إصدار Windows: {platform.version()}",f"المعمارية: {platform.machine()}",f"Python: {platform.python_version()}",f"المعالج: {psutil.cpu_count(logical=False) or 0} أنوية فعلية / {psutil.cpu_count() or 0} منطقية",f"الذاكرة: {psutil.virtual_memory().total/1024**3:.2f} GB",f"الإقلاع: {datetime.fromtimestamp(psutil.boot_time()):%Y-%m-%d %H:%M:%S}",f"صلاحيات المسؤول: {'نعم' if is_admin() else 'لا'}"]; self.replace(self.system,"\n".join(lines))
