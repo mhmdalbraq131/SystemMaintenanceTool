@@ -181,9 +181,14 @@ class App(tk.Tk):
     def page(self, key: str, title: str) -> tk.Frame:
         frame = tk.Frame(self.content, bg=BG)
         self.pages[key] = frame
-        tk.Label(frame, text=title, bg=BG, fg="white",
-                 font=("Consolas", 18, "bold"), anchor="e").pack(
-                 fill="x", padx=24, pady=(22, 14))
+        if key != "dashboard":
+            titlebar = tk.Frame(frame, bg=BG)
+            titlebar.pack(fill="x", padx=24, pady=(20, 12))
+            tk.Label(titlebar, text=title, bg=BG, fg=TEXT,
+                     font=("Segoe UI", 20, "bold"), anchor="e").pack(side="right")
+            tk.Label(titlebar, text=f"// {key.upper()}", bg=BG, fg=MUTED,
+                     font=("Consolas", 9)).pack(side="left", pady=8)
+            tk.Frame(frame, bg="#16364a", height=1).pack(fill="x", padx=24, pady=(0, 10))
         return frame
 
     def show(self, key: str) -> None:
