@@ -24,7 +24,9 @@ except Exception:
 BG = "#030712"
 PANEL = "#07111f"
 PANEL2 = "#0d1b2e"
-# Standard application font used across all Arabic UI pages.\n# The command console intentionally keeps Consolas for technical readability.\nUI_FONT = "Arial"
+# Standard application font used across all Arabic UI pages.
+# The command console intentionally keeps Consolas for technical readability.
+UI_FONT = "Arial"
 TEXT = "#dff7ff"
 MUTED = "#66809c"
 ACCENT = "#00d9ff"
@@ -55,7 +57,7 @@ class App(tk.Tk):
             if UI_FONT not in tkfont.families(self):
                 UI_FONT = "Arial"
         except Exception:
-            UI_FONT = "Segoe UI"
+            UI_FONT = "Arial"
         super().__init__()
         self.title("SYSTEM MAINTENANCE // COMMAND DECK")
         self.geometry("1320x820")
