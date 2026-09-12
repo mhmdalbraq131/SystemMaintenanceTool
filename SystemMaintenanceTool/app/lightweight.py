@@ -9,6 +9,7 @@ import socket
 import subprocess
 import threading
 import tkinter as tk
+import tkinter.font as tkfont
 from datetime import datetime
 from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
@@ -23,6 +24,8 @@ except Exception:
 BG = "#030712"
 PANEL = "#07111f"
 PANEL2 = "#0d1b2e"
+# Modern native Windows font with strong Arabic coverage.
+UI_FONT = "Nirmala UI"
 TEXT = "#dff7ff"
 MUTED = "#66809c"
 ACCENT = "#00d9ff"
@@ -48,6 +51,12 @@ def run_native(command: list[str], timeout: int = 900) -> tuple[int, str]:
 
 class App(tk.Tk):
     def __init__(self) -> None:
+        global UI_FONT
+        try:
+            if UI_FONT not in tkfont.families(self):
+                UI_FONT = "Segoe UI"
+        except Exception:
+            UI_FONT = "Segoe UI"
         super().__init__()
         self.title("SYSTEM MAINTENANCE // COMMAND DECK")
         self.geometry("1320x820")
@@ -67,7 +76,7 @@ class App(tk.Tk):
                      activebackground="#38e8ff" if primary else "#17344b",
                      activeforeground="#00131b" if primary else "white",
                      relief="flat",bd=0,padx=18,pady=9,
-                     font=("Segoe UI",9,"bold"),cursor="hand2")
+                     font=(UI_FONT,9,"bold"),cursor="hand2")
         def enter(_): b.configure(bg="#38e8ff" if primary else "#17344b")
         def leave(_): b.configure(bg=ACCENT if primary else PANEL2)
         b.bind("<Enter>",enter); b.bind("<Leave>",leave)
@@ -79,7 +88,7 @@ class App(tk.Tk):
         s.configure("Treeview", background=PANEL, fieldbackground=PANEL, foreground=TEXT,
                     rowheight=30, borderwidth=0)
         s.configure("Treeview.Heading", background=PANEL2, foreground=TEXT,
-                    relief="flat", font=("Segoe UI", 9, "bold"))
+                    relief="flat", font=(UI_FONT, 9, "bold"))
         s.configure("TProgressbar", troughcolor="#07111f", background=ACCENT, borderwidth=0,
                     thickness=5)
 
@@ -90,10 +99,10 @@ class App(tk.Tk):
 
         brand=tk.Frame(head,bg="#050b13")
         brand.pack(side="right",fill="y",padx=22)
-        tk.Label(brand,text="◈",bg="#050b13",fg=ACCENT,font=("Segoe UI",23,"bold")).pack(side="right",padx=(0,10),pady=10)
+        tk.Label(brand,text="◈",bg="#050b13",fg=ACCENT,font=(UI_FONT,23,"bold")).pack(side="right",padx=(0,10),pady=10)
         names=tk.Frame(brand,bg="#050b13"); names.pack(side="right",pady=10)
-        tk.Label(names,text="SYSTEM MAINTENANCE",bg="#050b13",fg=TEXT,font=("Segoe UI",13,"bold")).pack(anchor="e")
-        tk.Label(names,text="Windows Administration Center",bg="#050b13",fg=MUTED,font=("Segoe UI",8)).pack(anchor="e")
+        tk.Label(names,text="SYSTEM MAINTENANCE",bg="#050b13",fg=TEXT,font=(UI_FONT,13,"bold")).pack(anchor="e")
+        tk.Label(names,text="Windows Administration Center",bg="#050b13",fg=MUTED,font=(UI_FONT,8)).pack(anchor="e")
 
         self.status=tk.Label(head,text="READY",bg="#050b13",fg=GOOD,font=("Consolas",9,"bold"))
         self.status.pack(side="left",padx=22)
@@ -125,14 +134,14 @@ class App(tk.Tk):
             b=tk.Button(nav,text=f"{icon}   {title}",command=lambda k=key:self.show(k),
                         bg="#060d17",fg=TEXT,activebackground="#102c40",activeforeground="white",
                         relief="flat",bd=0,anchor="e",padx=18,pady=8,
-                        font=("Segoe UI",9),cursor="hand2")
+                        font=(UI_FONT,9),cursor="hand2")
             b.pack(fill="x",padx=9,pady=1); self.buttons[key]=b
 
         foot=tk.Frame(nav,bg="#060d17"); foot.pack(side="bottom",fill="x",padx=18,pady=16)
         tk.Frame(foot,bg="#123049",height=1).pack(fill="x",pady=(0,10))
         tk.Label(foot,text=("ADMINISTRATOR" if is_admin() else "STANDARD USER"),bg="#060d17",
                  fg=GOOD if is_admin() else WARN,font=("Consolas",8,"bold")).pack(anchor="e")
-        tk.Label(foot,text="Native Windows tools • No cloud",bg="#060d17",fg=MUTED,font=("Segoe UI",7)).pack(anchor="e",pady=(3,0))
+        tk.Label(foot,text="Native Windows tools • No cloud",bg="#060d17",fg=MUTED,font=(UI_FONT,7)).pack(anchor="e",pady=(3,0))
 
         self.content=tk.Frame(body,bg=BG); self.content.pack(side="left",fill="both",expand=True)
         self.pages={}
@@ -149,7 +158,7 @@ class App(tk.Tk):
         if key != "dashboard":
             bar = tk.Frame(frame, bg=BG)
             bar.pack(fill="x", padx=24, pady=(20, 12))
-            tk.Label(bar, text=title, bg=BG, fg=TEXT, font=("Segoe UI", 20, "bold")).pack(side="right")
+            tk.Label(bar, text=title, bg=BG, fg=TEXT, font=(UI_FONT, 20, "bold")).pack(side="right")
             tk.Label(bar, text=f"// {key.upper()}", bg=BG, fg=MUTED, font=("Consolas", 9)).pack(side="left", pady=8)
             tk.Frame(frame, bg="#16364a", height=1).pack(fill="x", padx=24, pady=(0, 10))
         return frame
@@ -166,13 +175,13 @@ class App(tk.Tk):
         hero=tk.Frame(f,bg=BG); hero.pack(fill="x",padx=28,pady=(22,10))
         left=tk.Frame(hero,bg=BG); left.pack(side="left")
         tk.Label(left,text="LIVE SYSTEM MONITOR",bg=BG,fg=ACCENT,font=("Consolas",9,"bold")).pack(anchor="w")
-        tk.Label(left,text="مركز مراقبة النظام",bg=BG,fg=TEXT,font=("Segoe UI",24,"bold")).pack(anchor="w",pady=(3,0))
-        tk.Label(left,text="مؤشرات مباشرة • تشخيص • صيانة • أوامر",bg=BG,fg=MUTED,font=("Segoe UI",9)).pack(anchor="w")
+        tk.Label(left,text="مركز مراقبة النظام",bg=BG,fg=TEXT,font=(UI_FONT,24,"bold")).pack(anchor="w",pady=(3,0))
+        tk.Label(left,text="مؤشرات مباشرة • تشخيص • صيانة • أوامر",bg=BG,fg=MUTED,font=(UI_FONT,9)).pack(anchor="w")
         right=tk.Frame(hero,bg=PANEL,highlightthickness=1,highlightbackground="#153149")
         right.pack(side="right",ipadx=14,ipady=9)
-        self.health=tk.Label(right,text="● النظام مستقر",bg=PANEL,fg=GOOD,font=("Segoe UI",10,"bold"))
+        self.health=tk.Label(right,text="● النظام مستقر",bg=PANEL,fg=GOOD,font=(UI_FONT,10,"bold"))
         self.health.pack(anchor="e")
-        self.health_detail=tk.Label(right,text="جاري قراءة المؤشرات...",bg=PANEL,fg=MUTED,font=("Segoe UI",8))
+        self.health_detail=tk.Label(right,text="جاري قراءة المؤشرات...",bg=PANEL,fg=MUTED,font=(UI_FONT,8))
         self.health_detail.pack(anchor="e",pady=(2,0))
 
         gauges=tk.Frame(f,bg=BG); gauges.pack(fill="x",padx=22,pady=4)
@@ -187,7 +196,7 @@ class App(tk.Tk):
             cv.pack(fill="both",expand=True)
             val=tk.Label(card,text="0%",bg=PANEL,fg=TEXT,font=("Consolas",18,"bold"))
             val.pack(pady=(0,1))
-            tk.Label(card,text=title,bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(pady=(0,10))
+            tk.Label(card,text=title,bg=PANEL,fg=MUTED,font=(UI_FONT,9)).pack(pady=(0,10))
             self.gauges[key]={"canvas":cv,"value":val,"accent":accent}
             self._draw_gauge(key,0)
 
@@ -200,7 +209,7 @@ class App(tk.Tk):
         self.net=self._telemetry_item(strip,"الشبكة","NETWORK")
 
         actions=tk.Frame(f,bg=BG); actions.pack(fill="x",padx=28,pady=(2,0))
-        tk.Label(actions,text="الوصول السريع",bg=BG,fg=TEXT,font=("Segoe UI",11,"bold")).pack(anchor="e",pady=(0,7))
+        tk.Label(actions,text="الوصول السريع",bg=BG,fg=TEXT,font=(UI_FONT,11,"bold")).pack(anchor="e",pady=(0,7))
         row=tk.Frame(actions,bg=BG); row.pack(fill="x")
         for title,fn,primary in [
             ("فحص صحة النظام",self.health_check,True),
@@ -216,10 +225,10 @@ class App(tk.Tk):
         tk.Label(box, text=code, bg=PANEL, fg=MUTED,
                  font=("Consolas", 7, "bold")).pack(anchor="e")
         value = tk.Label(box, text="—", bg=PANEL, fg=TEXT,
-                         font=("Segoe UI", 12, "bold"))
+                         font=(UI_FONT, 12, "bold"))
         value.pack(anchor="e")
         tk.Label(box, text=title, bg=PANEL, fg=MUTED,
-                 font=("Segoe UI", 8)).pack(anchor="e")
+                 font=(UI_FONT, 8)).pack(anchor="e")
         return value
 
     def _draw_gauge(self,key,value):
@@ -299,7 +308,7 @@ class App(tk.Tk):
         ]
         for title,fn in actions: self._button(f,title,fn).pack(fill="x",padx=24,pady=3)
         tk.Label(f,text=("تشغيل كمسؤول: نعم" if is_admin() else "تنبيه: شغّل الأداة كمسؤول لتنفيذ إصلاحات Windows."),
-                 bg=BG,fg=(GOOD if is_admin() else WARN),font=("Segoe UI",10)).pack(anchor="e",padx=24,pady=10)
+                 bg=BG,fg=(GOOD if is_admin() else WARN),font=(UI_FONT,10)).pack(anchor="e",padx=24,pady=10)
     def _service_controls(self):
         f=self.pages["services"]
         bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
@@ -341,25 +350,25 @@ class App(tk.Tk):
         f=self.pages["commands"]
         panel=tk.Frame(f,bg=PANEL,highlightthickness=1,highlightbackground="#15344b"); panel.pack(fill="x",padx=24,pady=(0,7))
         tk.Label(panel,text="⌘  COMMAND CENTER",bg=PANEL,fg=ACCENT,font=("Consolas",12,"bold")).pack(side="left",padx=16,pady=11)
-        tk.Label(panel,text="مكتبة أوامر Windows + محطة تنفيذ",bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(side="right",padx=16,pady=11)
+        tk.Label(panel,text="مكتبة أوامر Windows + محطة تنفيذ",bg=PANEL,fg=MUTED,font=(UI_FONT,9)).pack(side="right",padx=16,pady=11)
 
         main=tk.Frame(f,bg=BG); main.pack(fill="both",expand=True,padx=24,pady=6)
         library=tk.Frame(main,bg=PANEL,highlightthickness=1,highlightbackground="#15344b",width=365)
         library.pack(side="right",fill="y"); library.pack_propagate(False)
 
-        tk.Label(library,text="مكتبة أوامر النظام",bg=PANEL,fg=TEXT,font=("Segoe UI",13,"bold")).pack(anchor="e",padx=14,pady=(14,2))
-        tk.Label(library,text="اختر المجموعة ثم الأمر لمعرفة وظيفته",bg=PANEL,fg=MUTED,font=("Segoe UI",8)).pack(anchor="e",padx=14,pady=(0,8))
+        tk.Label(library,text="مكتبة أوامر النظام",bg=PANEL,fg=TEXT,font=(UI_FONT,13,"bold")).pack(anchor="e",padx=14,pady=(14,2))
+        tk.Label(library,text="اختر المجموعة ثم الأمر لمعرفة وظيفته",bg=PANEL,fg=MUTED,font=(UI_FONT,8)).pack(anchor="e",padx=14,pady=(0,8))
 
         top=tk.Frame(library,bg=PANEL); top.pack(fill="x",padx=10,pady=4)
         self.command_category=tk.StringVar(value="كل المجموعات")
         self.command_categories=ttk.Combobox(top,textvariable=self.command_category,state="readonly",
                                               values=["كل المجموعات"]+list(self.command_catalog.keys()),
-                                              justify="right",font=("Segoe UI",9))
+                                              justify="right",font=(UI_FONT,9))
         self.command_categories.pack(fill="x"); self.command_categories.bind("<<ComboboxSelected>>",lambda e:self._populate_command_list())
 
         self.command_list=tk.Listbox(library,bg="#050c15",fg=TEXT,selectbackground="#10465c",
                                      selectforeground=ACCENT,activestyle="none",relief="flat",
-                                     highlightthickness=0,font=("Segoe UI",9),justify="right")
+                                     highlightthickness=0,font=(UI_FONT,9),justify="right")
         self.command_list.pack(fill="both",expand=True,padx=10,pady=8)
         self.command_list.bind("<<ListboxSelect>>",lambda e:self._command_selected())
 
@@ -369,18 +378,20 @@ class App(tk.Tk):
         self.command_name=tk.Label(info,text="اختر أمرًا من المكتبة",bg=PANEL,fg=ACCENT,font=("Consolas",13,"bold"))
         self.command_name.pack(anchor="e",padx=16,pady=(13,2))
         self.command_description=tk.Label(info,text="سيظهر هنا شرح الأمر، فائدته، ونطاق استخدامه.",bg=PANEL,fg=TEXT,
-                                          font=("Segoe UI",10),justify="right",anchor="e",wraplength=760)
+                                          font=(UI_FONT,10),justify="right",anchor="e",wraplength=760)
         self.command_description.pack(fill="x",padx=16,pady=(0,5))
-        self.command_safety=tk.Label(info,text="",bg=PANEL,fg=WARN,font=("Segoe UI",8),justify="right",anchor="e")
+        self.command_safety=tk.Label(info,text="",bg=PANEL,fg=WARN,font=(UI_FONT,8),justify="right",anchor="e")
         self.command_safety.pack(fill="x",padx=16,pady=(0,11))
+        tk.Label(info,text="ملاحظة: بعض أوامر الإدارة تحتاج تشغيل الأداة كمسؤول بسبب UAC.",bg=PANEL,fg=MUTED,font=(UI_FONT,8)).pack(anchor="e",padx=16,pady=(0,9))
 
         row=tk.Frame(right,bg=BG); row.pack(fill="x",pady=5)
         tk.Label(row,text="الأمر",bg=BG,fg=MUTED,font=("Consolas",8,"bold")).pack(side="right")
         self.cmd_entry=tk.Entry(row,bg="#020812",fg=ACCENT,insertbackground=ACCENT,relief="flat",
                                 font=("Consolas",11)); self.cmd_entry.pack(side="right",fill="x",expand=True,ipady=10,padx=10)
         self._button(row,"تنفيذ  ▶",self.run_custom_command,True).pack(side="right")
+        self.cmd_entry.bind("<Return>", lambda _e: self.run_custom_command())
 
-        tk.Label(right,text="سجل التنفيذ",bg=BG,fg=TEXT,font=("Segoe UI",10,"bold")).pack(anchor="e",pady=(8,3))
+        tk.Label(right,text="سجل التنفيذ",bg=BG,fg=TEXT,font=(UI_FONT,10,"bold")).pack(anchor="e",pady=(8,3))
         self.cmd_output=tk.Text(right,bg="#02050a",fg="#9be7ff",insertbackground=ACCENT,relief="flat",
                                 wrap="none",font=("Consolas",10))
         self.cmd_output.pack(fill="both",expand=True)
@@ -388,6 +399,13 @@ class App(tk.Tk):
         self.cmd_output.configure(state="disabled")
 
         self._populate_command_list()
+
+    def _set_command(self, command: str) -> None:
+        """Place a catalog command into the execution line."""
+        self.cmd_entry.delete(0, "end")
+        self.cmd_entry.insert(0, command)
+        self.cmd_entry.focus_set()
+        self.status.config(text="الأمر جاهز للتنفيذ")
 
     def _command_selected(self):
         sel=self.command_list.curselection()
@@ -577,7 +595,7 @@ class App(tk.Tk):
     def _report_controls(self):
         f=self.pages["reports"]; self.report=self.textbox(f,("Consolas",9)); bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
         self._button(bar,"توليد التقرير",self.refresh_report,True).pack(side="right"); self._button(bar,"حفظ TXT",self.save_txt).pack(side="right",padx=5); self._button(bar,"حفظ JSON",self.save_json).pack(side="right")
-    def textbox(self,parent,font=("Segoe UI",10)):
+    def textbox(self,parent,font=(UI_FONT,10)):
         t=tk.Text(parent,bg=PANEL,fg=TEXT,insertbackground=ACCENT,relief="flat",wrap="word",font=font); t.pack(fill="both",expand=True,padx=24,pady=6); return t
     def tree(self,parent,cols,heads):
         wrapper=tk.Frame(parent,bg=BG); wrapper.pack(fill="both",expand=True,padx=24,pady=6); tree=ttk.Treeview(wrapper,columns=cols,show="headings")
@@ -708,15 +726,29 @@ Get-NetIPConfiguration | Where-Object {$_.IPv4DefaultGateway} | Select-Object In
         self.status.config(text="جاري تنفيذ العملية..."); self._async_command(cmd,None,900,show_window=True)
     def run_custom_command(self):
         raw=self.cmd_entry.get().strip()
-        if not raw: return
-        if not messagebox.askyesno("تأكيد","تنفيذ الأمر كما كُتب؟"): return
+        if not raw:
+            messagebox.showwarning("مركز الأوامر","اختر أمرًا من المكتبة أو اكتب أمرًا أولًا.")
+            self.status.config(text="لا يوجد أمر للتنفيذ")
+            return
+        if not messagebox.askyesno("تأكيد التنفيذ",f"سيتم تنفيذ الأمر التالي:\n\n{raw}\n\nهل تريد المتابعة؟"):
+            return
         self._async_custom(raw)
     def _async_custom(self,raw):
+        raw = raw.strip()
+        if not raw:
+            return
         self._console_write("\nPS> "+raw+"\n")
+        self.status.config(text="جاري تنفيذ الأمر...")
         def worker():
             try:
-                code,out=run_native(["cmd","/c",raw],900); self.after(0,lambda:self._console_write(f"{out}\n\n[EXIT {code}]\nPS> "))
-            except Exception as exc: self.after(0,lambda:self._console_write(f"ERROR: {exc}\nPS> "))
+                # /d disables CMD AutoRun entries and /s preserves normal CMD parsing.
+                code,out=run_native(["cmd.exe","/d","/s","/c",raw],900)
+                result = out or "(لا يوجد مخرجات — إذا كان الأمر رسوميًا فستظهر نافذة مستقلة.)"
+                self.after(0,lambda:self._console_write(f"{result}\n\n[EXIT {code}]\nPS> "))
+                self.after(0,lambda:self.status.config(text=("اكتمل التنفيذ" if code == 0 else f"فشل التنفيذ — Exit {code}")))
+            except Exception as exc:
+                self.after(0,lambda:self._console_write(f"ERROR: {exc}\nPS> "))
+                self.after(0,lambda:self.status.config(text="خطأ أثناء التنفيذ"))
         threading.Thread(target=worker,daemon=True).start()
     def _console_write(self,text): self.cmd_output.configure(state="normal"); self.cmd_output.insert("end",text); self.cmd_output.see("end"); self.cmd_output.configure(state="disabled")
     def _async_command(self,cmd,target,timeout,show_window=False):
