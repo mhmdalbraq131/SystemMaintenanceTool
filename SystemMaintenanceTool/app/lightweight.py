@@ -340,21 +340,240 @@ class App(tk.Tk):
     def _command_controls(self):
         f=self.pages["commands"]
         panel=tk.Frame(f,bg=PANEL,highlightthickness=1,highlightbackground="#15344b"); panel.pack(fill="x",padx=24,pady=(0,7))
-        tk.Label(panel,text="⌘  COMMAND TERMINAL",bg=PANEL,fg=ACCENT,font=("Consolas",12,"bold")).pack(side="left",padx=16,pady=11)
-        tk.Label(panel,text="محطة أوامر Windows المدمجة",bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(side="right",padx=16,pady=11)
-        quick=tk.Frame(f,bg=BG); quick.pack(fill="x",padx=24,pady=4)
-        for label,cmd in [
-            ("SYSTEMINFO","systeminfo"),("IPCONFIG","ipconfig /all"),("TASKLIST","tasklist"),
-            ("NETSTAT","netstat -ano"),("SERVICES","sc query"),("DISK","powershell -NoProfile -Command \"Get-Volume | Format-Table -AutoSize\""),
-            ("POWER","powercfg /getactivescheme"),("WHOAMI","whoami /all")
-        ]: self._button(quick,label,lambda c=cmd:self._set_command(c)).pack(side="right",padx=3)
-        row=tk.Frame(f,bg=BG); row.pack(fill="x",padx=24,pady=6)
-        self.cmd_entry=tk.Entry(row,bg="#020812",fg=ACCENT,insertbackground=ACCENT,relief="flat",font=("Consolas",12)); self.cmd_entry.pack(side="right",fill="x",expand=True,ipady=10,padx=(0,8))
-        self._button(row,"EXECUTE  ▶",self.run_custom_command,True).pack(side="right")
-        self.cmd_output=tk.Text(f,bg="#02050a",fg="#9be7ff",insertbackground=ACCENT,relief="flat",wrap="none",font=("Consolas",10)); self.cmd_output.pack(fill="both",expand=True,padx=24,pady=8)
-        self.cmd_output.insert("end","SYSTEM MAINTENANCE TERMINAL\n════════════════════════════════════════════════════════════\nLINK: ONLINE    SHELL: CMD.EXE    MODE: ADMIN-AWARE\n\nPS> ")
+        tk.Label(panel,text="⌘  COMMAND CENTER",bg=PANEL,fg=ACCENT,font=("Consolas",12,"bold")).pack(side="left",padx=16,pady=11)
+        tk.Label(panel,text="مكتبة أوامر Windows + محطة تنفيذ",bg=PANEL,fg=MUTED,font=("Segoe UI",9)).pack(side="right",padx=16,pady=11)
+
+        main=tk.Frame(f,bg=BG); main.pack(fill="both",expand=True,padx=24,pady=6)
+        library=tk.Frame(main,bg=PANEL,highlightthickness=1,highlightbackground="#15344b",width=365)
+        library.pack(side="right",fill="y"); library.pack_propagate(False)
+
+        tk.Label(library,text="مكتبة أوامر النظام",bg=PANEL,fg=TEXT,font=("Segoe UI",13,"bold")).pack(anchor="e",padx=14,pady=(14,2))
+        tk.Label(library,text="اختر المجموعة ثم الأمر لمعرفة وظيفته",bg=PANEL,fg=MUTED,font=("Segoe UI",8)).pack(anchor="e",padx=14,pady=(0,8))
+
+        top=tk.Frame(library,bg=PANEL); top.pack(fill="x",padx=10,pady=4)
+        self.command_category=tk.StringVar(value="كل المجموعات")
+        self.command_categories=ttk.Combobox(top,textvariable=self.command_category,state="readonly",
+                                              values=["كل المجموعات"]+list(self.command_catalog.keys()),
+                                              justify="right",font=("Segoe UI",9))
+        self.command_categories.pack(fill="x"); self.command_categories.bind("<<ComboboxSelected>>",lambda e:self._populate_command_list())
+
+        self.command_list=tk.Listbox(library,bg="#050c15",fg=TEXT,selectbackground="#10465c",
+                                     selectforeground=ACCENT,activestyle="none",relief="flat",
+                                     highlightthickness=0,font=("Segoe UI",9),justify="right")
+        self.command_list.pack(fill="both",expand=True,padx=10,pady=8)
+        self.command_list.bind("<<ListboxSelect>>",lambda e:self._command_selected())
+
+        right=tk.Frame(main,bg=BG); right.pack(side="left",fill="both",expand=True,padx=(0,12))
+        info=tk.Frame(right,bg=PANEL,highlightthickness=1,highlightbackground="#15344b")
+        info.pack(fill="x",pady=(0,8))
+        self.command_name=tk.Label(info,text="اختر أمرًا من المكتبة",bg=PANEL,fg=ACCENT,font=("Consolas",13,"bold"))
+        self.command_name.pack(anchor="e",padx=16,pady=(13,2))
+        self.command_description=tk.Label(info,text="سيظهر هنا شرح الأمر، فائدته، ونطاق استخدامه.",bg=PANEL,fg=TEXT,
+                                          font=("Segoe UI",10),justify="right",anchor="e",wraplength=760)
+        self.command_description.pack(fill="x",padx=16,pady=(0,5))
+        self.command_safety=tk.Label(info,text="",bg=PANEL,fg=WARN,font=("Segoe UI",8),justify="right",anchor="e")
+        self.command_safety.pack(fill="x",padx=16,pady=(0,11))
+
+        row=tk.Frame(right,bg=BG); row.pack(fill="x",pady=5)
+        tk.Label(row,text="الأمر",bg=BG,fg=MUTED,font=("Consolas",8,"bold")).pack(side="right")
+        self.cmd_entry=tk.Entry(row,bg="#020812",fg=ACCENT,insertbackground=ACCENT,relief="flat",
+                                font=("Consolas",11)); self.cmd_entry.pack(side="right",fill="x",expand=True,ipady=10,padx=10)
+        self._button(row,"تنفيذ  ▶",self.run_custom_command,True).pack(side="right")
+
+        tk.Label(right,text="سجل التنفيذ",bg=BG,fg=TEXT,font=("Segoe UI",10,"bold")).pack(anchor="e",pady=(8,3))
+        self.cmd_output=tk.Text(right,bg="#02050a",fg="#9be7ff",insertbackground=ACCENT,relief="flat",
+                                wrap="none",font=("Consolas",10))
+        self.cmd_output.pack(fill="both",expand=True)
+        self.cmd_output.insert("end","SYSTEM MAINTENANCE TERMINAL\\n════════════════════════════════════════════════════════════\\nLINK: ONLINE    SHELL: CMD.EXE    MODE: ADMIN-AWARE\\n\\nPS> ")
         self.cmd_output.configure(state="disabled")
-    def _set_command(self,value): self.cmd_entry.delete(0,"end"); self.cmd_entry.insert(0,value); self.cmd_entry.focus_set()
+
+        self._populate_command_list()
+
+    def _command_selected(self):
+        sel=self.command_list.curselection()
+        if not sel: return
+        category=self.command_category.get()
+        names=self._command_visible
+        name=names[sel[0]]
+        item=None
+        for cat,items in self.command_catalog.items():
+            if category=="كل المجموعات" or cat==category:
+                for x in items:
+                    if x[0]==name: item=x; break
+            if item: break
+        if not item: return
+        command,description,safety=item[1],item[2],item[3]
+        self.command_name.config(text=f"{name}  //  {command}")
+        self.command_description.config(text=description)
+        self.command_safety.config(text=safety)
+        self._set_command(command)
+
+    def _populate_command_list(self):
+        category=self.command_category.get()
+        names=[]
+        if category=="كل المجموعات":
+            for items in self.command_catalog.values(): names.extend([x[0] for x in items])
+        else:
+            names=[x[0] for x in self.command_catalog.get(category,[])]
+        self._command_visible=names
+        self.command_list.delete(0,"end")
+        for name in names: self.command_list.insert("end",name)
+
+    @property
+    def command_catalog(self):
+        return {
+            "معلومات النظام":[
+                ("systeminfo","systeminfo","يعرض إصدار Windows، بنية النظام، الذاكرة، وقت الإقلاع، الإصلاحات المثبتة ومعلومات أساسية عن الجهاز.","آمن للقراءة."),
+                ("hostname","hostname","يعرض اسم الجهاز على الشبكة؛ مفيد للتعريف بالجهاز قبل تنفيذ الإدارة عن بُعد.","آمن للقراءة."),
+                ("whoami","whoami /all","يعرض المستخدم الحالي، المجموعات، الامتيازات وبيانات جلسة الدخول.","آمن للقراءة."),
+                ("ver","ver","يعرض إصدار Windows الحالي باختصار.","آمن للقراءة."),
+                ("set","set","يعرض متغيرات البيئة المستخدمة في جلسة الأوامر؛ مفيد لتشخيص PATH وTEMP وغيرها.","آمن للقراءة."),
+                ("driverquery","driverquery","يعرض تعريفات الأجهزة المحملة وحالتها؛ مفيد لتشخيص مشاكل التعريفات.","آمن للقراءة."),
+                ("msinfo32","msinfo32","يفتح أداة معلومات النظام الرسومية للحصول على جرد شامل للعتاد والبرامج.","يفتح أداة Windows."),
+            ],
+            "العمليات والمهام":[
+                ("tasklist","tasklist","يعرض جميع العمليات الجارية مع PID والذاكرة وغيرها؛ نقطة البداية لتحديد العمليات الثقيلة.","آمن للقراءة."),
+                ("tasklist /svc","tasklist /svc","يربط العمليات بالخدمات التي تستضيفها؛ مفيد لمعرفة الخدمة المرتبطة بعملية معينة.","آمن للقراءة."),
+                ("taskkill","taskkill /PID 1234 /T","ينهي عملية محددة بالـPID وجميع العمليات التابعة لها؛ استبدل 1234 بالمعرّف المطلوب.","تنبيه: ينهي العملية وقد تفقد بيانات غير محفوظة."),
+                ("taskkill /force","taskkill /F /PID 1234 /T","إنهاء إجباري لعملية لا تستجيب؛ يستخدم كخيار أخير.","خطر متوسط: استخدمه فقط عند الحاجة."),
+                ("resmon","resmon","يفتح Resource Monitor لمراقبة CPU والذاكرة والقرص والشبكة بالتفصيل.","يفتح أداة Windows."),
+                ("perfmon","perfmon","يفتح Performance Monitor لتحليل مؤشرات الأداء وتسجيلها.","يفتح أداة Windows."),
+            ],
+            "الخدمات Services":[
+                ("sc query","sc query","يعرض خدمات Windows وحالتها الحالية؛ مفيد للتشخيص السريع.","آمن للقراءة."),
+                ("sc queryex","sc queryex type= service state= all","يعرض الخدمات مع PID والمعلومات الموسعة.","آمن للقراءة."),
+                ("sc start","sc start Spooler","يشغّل خدمة محددة مثل Spooler؛ يجب استبدال الاسم باسم الخدمة الحقيقي.","يغيّر حالة خدمة."),
+                ("sc stop","sc stop Spooler","يوقف خدمة محددة؛ قد تتوقف وظائف تعتمد عليها.","يغيّر حالة خدمة."),
+                ("sc config","sc config Spooler start= auto","يغيّر إعداد بدء الخدمة، مثل تلقائي أو يدوي أو معطل.","تنبيه: يغيّر إعدادات النظام."),
+                ("net start","net start","يعرض الخدمات التي تعمل حاليًا.","آمن للقراءة."),
+                ("net stop","net stop Spooler","يوقف خدمة بالاسم باستخدام واجهة Net القديمة.","يغيّر حالة خدمة."),
+                ("services.msc","services.msc","يفتح وحدة إدارة خدمات Windows الرسومية.","يفتح أداة Windows."),
+            ],
+            "الشبكة Network":[
+                ("ipconfig","ipconfig /all","يعرض عناوين IP وDNS والبوابة وDHCP لكل محول؛ أساسي لتشخيص الشبكة.","آمن للقراءة."),
+                ("ipconfig /flushdns","ipconfig /flushdns","يمسح ذاكرة DNS المحلية لإجبار الجهاز على طلب سجلات DNS من جديد.","آمن نسبيًا."),
+                ("ipconfig /release","ipconfig /release","يحرر عنوان DHCP الحالي للمحول؛ يستخدم في استكشاف مشاكل الحصول على IP.","يقطع الاتصال مؤقتًا."),
+                ("ipconfig /renew","ipconfig /renew","يطلب عنوان DHCP جديدًا للمحول.","قد يعيد الاتصال بالشبكة."),
+                ("ping","ping 1.1.1.1","يختبر الوصول إلى عنوان IP وقياس زمن الاستجابة وفقد الحزم.","آمن للقراءة."),
+                ("tracert","tracert example.com","يتتبع المسار الشبكي إلى وجهة ويظهر نقاط العبور وزمنها.","آمن للقراءة."),
+                ("pathping","pathping example.com","يجمع بين tracert وping لتحليل فقد الحزم وزمن الاستجابة على المسار.","آمن للقراءة."),
+                ("nslookup","nslookup example.com","يفحص حل أسماء DNS ويعرض الخادم والنتيجة؛ مفيد لتشخيص DNS.","آمن للقراءة."),
+                ("netstat","netstat -ano","يعرض الاتصالات والمنافذ وحالة TCP/UDP وPID المرتبط بها.","آمن للقراءة."),
+                ("arp","arp -a","يعرض جدول ARP المحلي الذي يربط عناوين IP بعناوين MAC.","آمن للقراءة."),
+                ("route","route print","يعرض جدول التوجيه المحلي والمسارات المستخدمة لإرسال الحزم.","آمن للقراءة."),
+                ("getmac","getmac /v","يعرض عناوين MAC للمحولات؛ مفيد لجرد الشبكة.","آمن للقراءة."),
+                ("netsh interface","netsh interface show interface","يعرض حالة واجهات الشبكة وأسمائها.","آمن للقراءة."),
+                ("netsh firewall","netsh advfirewall show allprofiles","يعرض حالة ملفات تعريف جدار حماية Windows.","آمن للقراءة."),
+            ],
+            "التخزين والأقراص":[
+                ("diskpart","diskpart","يفتح أداة إدارة الأقراص والأقسام على مستوى منخفض؛ قوية لإدارة الأقراص.","خطر مرتفع: أوامر داخل DiskPart قد تمسح أقسامًا."),
+                ("chkdsk","chkdsk C: /scan","يفحص نظام ملفات القرص بحثًا عن أخطاء دون جدولة إصلاح شامل؛ مناسب للفحص الأولي.","قراءة/فحص؛ بعض أوضاع الإصلاح قد تتطلب إعادة تشغيل."),
+                ("chkdsk /f","chkdsk C: /f","يفحص ويصلح أخطاء نظام الملفات؛ قد يطلب قفل القرص وإعادة التشغيل.","تنبيه: يغيّر نظام الملفات."),
+                ("fsutil","fsutil volume diskfree C:","يعرض المساحة الحرة على وحدة تخزين؛ FSUtil يحتوي أوامر إدارية كثيرة.","آمن لهذا الاستخدام؛ بقية FSUtil قد تكون حساسة."),
+                ("format","format X:","يهيئ وحدة تخزين بنظام ملفات جديد.","خطر مرتفع: قد يمسح البيانات."),
+                ("mountvol","mountvol","يعرض نقاط تركيب وحدات التخزين ومعرّفاتها.","آمن للقراءة."),
+                ("diskmgmt.msc","diskmgmt.msc","يفتح إدارة الأقراص الرسومية لإنشاء وتوسيع وتقليص وإدارة وحدات التخزين.","يفتح أداة إدارية."),
+            ],
+            "إصلاح وصيانة Windows":[
+                ("sfc /scannow","sfc /scannow","يفحص ملفات نظام Windows المحمية ويستبدل الملفات التالفة بنسخ سليمة عندما يستطيع.","إصلاح فعلي؛ يفضّل تشغيله كمسؤول."),
+                ("DISM CheckHealth","DISM /Online /Cleanup-Image /CheckHealth","يتحقق سريعًا مما إذا كانت صورة Windows موسومة بوجود تلف معروف.","آمن للفحص."),
+                ("DISM ScanHealth","DISM /Online /Cleanup-Image /ScanHealth","يفحص صورة Windows بعمق بحثًا عن تلف في مكونات النظام.","فحص قد يستغرق وقتًا."),
+                ("DISM RestoreHealth","DISM /Online /Cleanup-Image /RestoreHealth","يحاول إصلاح تلف مكونات Windows باستخدام مصادر الإصلاح المتاحة.","إصلاح فعلي؛ قد يحتاج اتصالًا ومصدر Windows."),
+                ("DISM StartComponentCleanup","DISM /Online /Cleanup-Image /StartComponentCleanup","ينظف الإصدارات القديمة من مكونات Windows التي لم تعد مطلوبة.","تنظيف؛ لا تشغله أثناء تحديثات حساسة."),
+                ("gpupdate","gpupdate /force","يعيد تطبيق Group Policy على الجهاز والمستخدم فورًا؛ مفيد بعد تغيير سياسات المؤسسة.","قد يطبق سياسات إدارية فورًا."),
+                ("gpresult","gpresult /h gpresult.html","ينشئ تقريرًا عن Group Policy المطبقة على المستخدم والجهاز.","يكتب ملف تقرير في المسار الحالي."),
+                ("powercfg","powercfg /getactivescheme","يعرض خطة الطاقة النشطة؛ مفيد لتشخيص أداء الطاقة.","آمن للقراءة."),
+                ("cleanmgr","cleanmgr","يفتح أداة تنظيف القرص القديمة المتوفرة في إصدارات Windows التي تدعمها.","يفتح أداة Windows."),
+            ],
+            "الأمان Security":[
+                ("net user","net user","يعرض حسابات المستخدمين المحليين؛ مفيد لجرد الحسابات.","آمن للقراءة."),
+                ("net localgroup","net localgroup","يعرض المجموعات المحلية وأعضاءها؛ مفيد لمراجعة الامتيازات.","آمن للقراءة."),
+                ("whoami /groups","whoami /groups","يعرض مجموعات المستخدم الحالي وعضويته الفعلية.","آمن للقراءة."),
+                ("whoami /priv","whoami /priv","يعرض الامتيازات التي يملكها رمز أمان المستخدم الحالي.","آمن للقراءة."),
+                ("auditpol","auditpol /get /category:*","يعرض إعدادات تدقيق Windows الحالية؛ مفيد لمراجعة سياسة التدقيق.","قراءة للإعدادات."),
+                ("wevtutil","wevtutil el","يعرض سجلات الأحداث المسجلة على الجهاز.","آمن للقراءة."),
+                ("netsh advfirewall","netsh advfirewall show allprofiles","يعرض إعدادات جدار الحماية لكل ملفات التعريف.","آمن للقراءة."),
+                ("secpol.msc","secpol.msc","يفتح Local Security Policy لإدارة سياسات الأمان المحلية.","أداة إدارية؛ لا تغيّر شيئًا دون معرفة الأثر."),
+            ],
+            "سجل الأحداث":[
+                ("wevtutil el","wevtutil el","يسرد أسماء سجلات أحداث Windows المتاحة.","آمن للقراءة."),
+                ("wevtutil qe","wevtutil qe System /c:20 /f:text","يعرض آخر 20 حدثًا من سجل System بصيغة نصية.","آمن للقراءة."),
+                ("wevtutil gli","wevtutil gli System","يعرض خصائص سجل أحداث محدد مثل الحجم وموقع الملف.","آمن للقراءة."),
+                ("eventvwr.msc","eventvwr.msc","يفتح Event Viewer لتحليل الأخطاء والتحذيرات والأحداث الأمنية.","يفتح أداة Windows."),
+                ("eventcreate","eventcreate /T INFORMATION /ID 100 /L APPLICATION /SO SystemMaintenanceTool /D Test","ينشئ حدثًا مخصصًا في سجل الأحداث؛ مفيد للاختبار والتكامل.","يكتب حدثًا جديدًا في السجل."),
+            ],
+            "المستخدمون والصلاحيات":[
+                ("net user list","net user","يسرد الحسابات المحلية على الجهاز.","آمن للقراءة."),
+                ("net user details","net user Administrator","يعرض تفاصيل حساب محدد؛ استبدل Administrator باسم الحساب.","آمن للقراءة."),
+                ("net localgroup administrators","net localgroup Administrators","يعرض أعضاء مجموعة Administrators المحلية.","آمن للقراءة."),
+                ("query user","query user","يعرض جلسات المستخدمين الحالية وحالتها ووقت الدخول.","آمن للقراءة."),
+                ("quser","quser","اختصار لعرض جلسات المستخدمين المتصلين.","آمن للقراءة."),
+                ("whoami /user","whoami /user","يعرض اسم المستخدم الحالي ومعرّف الأمان SID.","آمن للقراءة."),
+            ],
+            "بدء التشغيل والمهام المجدولة":[
+                ("schtasks /query","schtasks /query /fo TABLE /v","يعرض المهام المجدولة وتفاصيل تشغيلها؛ مفيد لاكتشاف مهام بدء التشغيل والصيانة.","آمن للقراءة."),
+                ("schtasks /query /fo CSV","schtasks /query /fo CSV /nh","يصدر قائمة المهام المجدولة بصيغة CSV مناسبة للتحليل.","آمن للقراءة."),
+                ("schtasks /run","schtasks /run /tn \"اسم المهمة\"","يشغل مهمة مجدولة يدويًا؛ استبدل الاسم بالمسار الحقيقي للمهمة.","ينفذ مهمة على الجهاز."),
+                ("schtasks /end","schtasks /end /tn \"اسم المهمة\"","ينهي تشغيل مهمة مجدولة حاليًا.","يوقف مهمة جارية."),
+                ("msconfig","msconfig","يفتح System Configuration لإدارة خيارات الإقلاع والخدمات وأدوات التشخيص.","أداة حساسة؛ تغييراتها تؤثر على الإقلاع."),
+            ],
+            "الملفات والملكية":[
+                ("dir","dir","يعرض الملفات والمجلدات في مسار محدد؛ مفيد للجرد السريع.","آمن للقراءة."),
+                ("tree","tree /F","يعرض هيكل المجلدات والملفات بشكل شجري.","آمن للقراءة."),
+                ("where","where python","يبحث عن مسار ملف تنفيذي في PATH؛ مفيد لتشخيص تعارض الإصدارات.","آمن للقراءة."),
+                ("robocopy","robocopy C:\\Source D:\\Backup /E /L","يعرض ما الذي سيُنسخ بين مسارين باستخدام وضع المحاكاة /L؛ مناسب للتأكد قبل النسخ.","قراءة فقط مع /L؛ أزل /L فقط بعد المراجعة."),
+                ("icacls","icacls C:\\Path","يعرض أذونات NTFS للمسار المحدد.","آمن للقراءة."),
+                ("attrib","attrib","يعرض خصائص الملفات مثل مخفي وقراءة فقط.","آمن للقراءة."),
+                ("compact","compact /q","يعرض حالة ضغط NTFS للمجلدات والملفات.","آمن للقراءة."),
+            ],
+            "السجل Registry":[
+                ("reg query","reg query HKLM\\SOFTWARE","يقرأ مفاتيح وقيم Registry؛ مفيد لتشخيص إعدادات Windows والبرامج.","آمن للقراءة."),
+                ("reg query Run","reg query HKCU\\Software\\Microsoft\\Windows\\CurrentVersion\\Run","يعرض برامج بدء التشغيل المسجلة للمستخدم الحالي.","آمن للقراءة."),
+                ("reg export","reg export HKCU\\Software\\Example backup.reg","يصدّر مفتاح Registry إلى ملف للنسخ الاحتياطي قبل التعديل.","يكتب نسخة احتياطية إلى ملف."),
+                ("regedit","regedit","يفتح محرر Registry الرسومي.","أداة حساسة؛ تغييرات Registry قد تعطل النظام."),
+            ],
+            "الطاقة والإقلاع":[
+                ("powercfg /list","powercfg /list","يسرد خطط الطاقة المتاحة على الجهاز.","آمن للقراءة."),
+                ("powercfg /energy","powercfg /energy","يحلل استهلاك الطاقة ومشاكل الكفاءة وينشئ تقريرًا.","فحص؛ قد يستغرق نحو دقيقة."),
+                ("powercfg /batteryreport","powercfg /batteryreport","ينشئ تقرير HTML عن حالة واستخدام بطارية أجهزة Windows المحمولة.","يكتب تقريرًا في المسار الحالي."),
+                ("shutdown /a","shutdown /a","يلغي عملية إيقاف التشغيل أو إعادة التشغيل المجدولة إذا كانت قابلة للإلغاء.","يؤثر على جلسة النظام."),
+                ("shutdown /r","shutdown /r /t 60","يجدول إعادة تشغيل بعد 60 ثانية؛ غيّر المهلة حسب الحاجة.","خطر تشغيلي: قد تغلق البرامج."),
+                ("bcdedit","bcdedit /enum","يعرض إعدادات Boot Configuration Data الحالية.","قراءة فقط؛ تعديل BCD حساس جدًا."),
+            ],
+            "الإدارة والأدوات":[
+                ("computer management","compmgmt.msc","يفتح Computer Management ويجمع عدة وحدات إدارية في مكان واحد.","يفتح أداة إدارية."),
+                ("device manager","devmgmt.msc","يفتح Device Manager لفحص الأجهزة والتعريفات والأخطاء.","يفتح أداة إدارية."),
+                ("task manager","taskmgr","يفتح Task Manager لمراقبة العمليات والأداء.","يفتح أداة Windows."),
+                ("system configuration","msconfig","يفتح System Configuration لإدارة الإقلاع والخدمات وخيارات التشخيص.","أداة حساسة."),
+                ("programs and features","appwiz.cpl","يفتح قائمة البرامج المثبتة وإلغاء التثبيت التقليدية.","يفتح أداة Windows."),
+                ("control panel","control","يفتح Control Panel.","يفتح أداة Windows."),
+                ("computer properties","sysdm.cpl","يفتح System Properties لإعدادات اسم الجهاز والأداء والمتقدم.","يفتح إعدادات Windows."),
+                ("network connections","ncpa.cpl","يفتح Network Connections لإدارة محولات الشبكة.","يفتح إعدادات Windows."),
+                ("event viewer","eventvwr.msc","يفتح Event Viewer.","يفتح أداة Windows."),
+                ("disk management","diskmgmt.msc","يفتح Disk Management.","يفتح أداة إدارية."),
+                ("services","services.msc","يفتح إدارة الخدمات.","يفتح أداة إدارية."),
+            ],
+        }
+
+    def run_custom_command(self):
+        raw=self.cmd_entry.get().strip()
+        if not raw: return
+        if not messagebox.askyesno("تأكيد التنفيذ",f"سيتم تنفيذ الأمر التالي:\\n\\n{raw}\\n\\nهل تريد المتابعة؟"): return
+        self._async_custom(raw)
+
+    def _async_custom(self,raw):
+        self._console_write("\\nPS> "+raw+"\\n")
+        def worker():
+            try:
+                code,out=run_native(["cmd","/c",raw],900)
+                self.after(0,lambda:self._console_write(f"{out}\\n\\n[EXIT {code}]\\nPS> "))
+            except Exception as exc:
+                self.after(0,lambda:self._console_write(f"ERROR: {exc}\\nPS> "))
+        threading.Thread(target=worker,daemon=True).start()
+
+    def _console_write(self,text):
+        self.cmd_output.configure(state="normal"); self.cmd_output.insert("end",text); self.cmd_output.see("end"); self.cmd_output.configure(state="disabled")
+
     def _report_controls(self):
         f=self.pages["reports"]; self.report=self.textbox(f,("Consolas",9)); bar=tk.Frame(f,bg=BG); bar.pack(fill="x",padx=24,pady=5)
         self._button(bar,"توليد التقرير",self.refresh_report,True).pack(side="right"); self._button(bar,"حفظ TXT",self.save_txt).pack(side="right",padx=5); self._button(bar,"حفظ JSON",self.save_json).pack(side="right")
