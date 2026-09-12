@@ -24,8 +24,7 @@ except Exception:
 BG = "#030712"
 PANEL = "#07111f"
 PANEL2 = "#0d1b2e"
-# Modern native Windows font with strong Arabic coverage.
-UI_FONT = "Nirmala UI"
+# Standard application font used across all Arabic UI pages.\n# The command console intentionally keeps Consolas for technical readability.\nUI_FONT = "Arial"
 TEXT = "#dff7ff"
 MUTED = "#66809c"
 ACCENT = "#00d9ff"
@@ -54,7 +53,7 @@ class App(tk.Tk):
         global UI_FONT
         try:
             if UI_FONT not in tkfont.families(self):
-                UI_FONT = "Segoe UI"
+                UI_FONT = "Arial"
         except Exception:
             UI_FONT = "Segoe UI"
         super().__init__()
